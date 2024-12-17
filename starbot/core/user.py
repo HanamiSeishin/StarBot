@@ -138,7 +138,7 @@ class User:
             "mid": self.uid
         }
         params_wbi = encWbi(params, **self.__wbi_keys)
-        return await request("GET", url=api["url"], params=params, credential=self.credential)
+        return await request("GET", url=api["url"], params=params_wbi, credential=self.credential)
     
     async def __get_self_info(self):
         """
