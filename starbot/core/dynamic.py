@@ -16,7 +16,6 @@ async def dynamic_spider(datasource: DataSource):
     logger.success("动态推送模块已启动")
 
     dynamic_url = "https://api.vc.bilibili.com/dynamic_svr/v1/dynamic_svr/dynamic_new?type_list=268435455"
-    credential = get_credential()
     dynamic_interval = config.get("DYNAMIC_INTERVAL")
 
     if dynamic_interval < 10:
@@ -27,7 +26,7 @@ async def dynamic_spider(datasource: DataSource):
 
         latest_dynamic = {}
         try:
-            latest_dynamic = await request("GET", dynamic_url, credential=credential)
+            latest_dynamic = await request("GET", dynamic_url, credential=get_credential())
         except ResponseCodeException as ex:
             if ex.code == -6:
                 continue

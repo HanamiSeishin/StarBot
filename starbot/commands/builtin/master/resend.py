@@ -8,7 +8,7 @@ from graia.saya.builtins.broadcast import ListenerSchema
 from loguru import logger
 
 from ....core.datasource import DataSource
-from ....utils import config
+from ....utils import config, MessageUtil
 
 prefix = config.get("COMMAND_PREFIX")
 master = config.get("MASTER_QQ")
@@ -25,7 +25,9 @@ channel = Channel.current()
         )],
     )
 )
-async def resend(app: Ariadne, friend: Friend):
+async def resend(app: Ariadne, friend: Friend, message: MessageChain):
+    if MessageUtil.check_at_object(app.account, message) is False:
+        return
     logger.info(f"好友[{friend.id}] 触发命令 : 补发")
 
     if friend.id != master:
