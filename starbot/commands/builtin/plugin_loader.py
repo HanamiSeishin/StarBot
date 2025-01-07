@@ -1,3 +1,5 @@
+import asyncio
+import sys
 from graia.ariadne.app import Ariadne
 from graia.ariadne.event.message import FriendMessage
 from graia.ariadne.message.parser.twilight import Twilight, FullMatch, UnionMatch
@@ -34,7 +36,25 @@ async def _ReloadPlugins(app: Ariadne, friend: Friend):
     if custom_commands is None or custom_commands == "":
         logger.info(f"自定义命令为设置，无需重载")
         return
-    _channel = saya.channels.get(custom_commands)
-    saya.reload_channel(_channel)
+    try:
+        _channel = saya.channels.get(custom_commands)
+        logger.debug(f"卸载{custom_commands}")
+        saya.uninstall_channel(_channel)
+        channel_list = []
+        for saya_channel_name, saya_channel in saya.channels.items():
+            if saya_channel_name.startswith(f"{custom_commands}."):
+                logger.debug(f"卸载{saya_channel_name}")
+                channel_list.append(saya_channel)
+        for c in channel_list:
+            saya.uninstall_channel(c)
+        await asyncio.sleep(3)
+        with saya.module_context():
+            logger.debug(f"安装{custom_commands}")
+            saya.require(custom_commands)
+    except Exception as e:
+        logger.error(f"自定义命令({custom_commands})重载失败\n{e}")
+        await app.send_message(friend, f"自定义命令({custom_commands})重载失败\n{e}")
+        raise e
+
     logger.success(f"自定义命令({custom_commands})重载成功")
-    return await app.send_message(friend, f"自定义命令({custom_commands})重载成功")
+    await app.send_message(friend, f"自定义命令({custom_commands})重载成功")
