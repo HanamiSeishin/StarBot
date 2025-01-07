@@ -37,4 +37,4 @@ async def _ReloadPlugins(app: Ariadne, friend: Friend):
     _channel = saya.channels.get(custom_commands)
     saya.reload_channel(_channel)
     logger.success(f"自定义命令({custom_commands})重载成功")
-    return await app.send_message(friend, f"自定义命令({custom_commands})重载成功")
+    await app.send_message(friend, f"自定义命令({custom_commands})重载成功")
