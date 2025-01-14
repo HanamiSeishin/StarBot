@@ -319,10 +319,11 @@ class StarBot:
             "<level>{message}</level>"
         )
         logger.remove()
-        logger.add(sys.stderr, format=logger_format, level="INFO")
+        logger.add(sys.stderr, format=logger_format, level="INFO", backtrace=True, diagnose=True)
         if config.get("LOG_TO_FILE"):
             logger.add("logs/{time:YYYY-MM}/starbot-{time:YYYY-MM-DD}.log", level="INFO", rotation="00:00",
-                       format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{line} | {message}")
+                       format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{line} | {message}",
+                       backtrace=True, diagnose=True)
         logger.disable("graia.ariadne.model")
         logger.disable("graia.ariadne.service")
         logger.disable("graia.saya")

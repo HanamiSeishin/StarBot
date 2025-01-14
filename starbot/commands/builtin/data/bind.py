@@ -4,7 +4,8 @@ from graia.ariadne import Ariadne
 from graia.ariadne.event.message import FriendMessage, GroupMessage
 from graia.ariadne.message.chain import MessageChain
 from graia.ariadne.message.element import Source, At
-from graia.ariadne.message.parser.twilight import Twilight, FullMatch, UnionMatch, ParamMatch, ResultValue, ElementMatch
+from graia.ariadne.message.parser.twilight import Twilight, FullMatch, UnionMatch, ParamMatch, ResultValue, \
+    ElementMatch, SpacePolicy
 from graia.ariadne.model import Friend, Member, Group
 from graia.ariadne.util.interrupt import FunctionWaiter
 from graia.saya import Channel
@@ -26,7 +27,7 @@ channel = Channel.current()
         inline_dispatchers=[Twilight(
             ElementMatch(At, optional=True),
             FullMatch(prefix),
-            UnionMatch("绑定", "bind"),
+            UnionMatch("绑定", "bind").space(SpacePolicy.FORCE),
             "uid" @ ParamMatch()
         )],
     )
