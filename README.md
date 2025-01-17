@@ -22,6 +22,13 @@
 
 项目依赖于 Redis 进行持久化的直播相关数据存储，依赖于 Mirai 和 mirai-http 进行消息推送
 
+### 魔改特性
+该版本为魔改版starbot，对比主干版本，他多了些什么：
+1、新增了插件重载指令，指令为 重载插件或reload_plugins，可以执行自定义命令包的指令重载，搭配[starbot-mysql-plugin](https://github.com/HanamiSeishin/starbot-mysql-plugin)插件可实现插件热加载
+2、对指令进行了at对象的校验，该改动使得bot拒绝相应at其他成员、at全体和引用回复消息
+3、对指令和参数之间添加了空格强校验，搭配第2条可以极大减少指令误触现象
+4、每次动态爬取取用最新的cookie字符串，这个改动主要是适配暂未开源的B站cookie热更新插件
+
 ### 安装
 
 ```shell
