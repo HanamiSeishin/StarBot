@@ -2,8 +2,6 @@ import asyncio
 import json
 import signal
 import sys
-if sys.platform == 'linux':
-    import uvloop
 from json import JSONDecodeError
 
 from creart import create
@@ -96,9 +94,6 @@ class StarBot:
         """
         StarBot 入口
         """
-        if sys.platform == 'linux':
-            logger.info("linux环境下用uvloop改善asyncio性能")
-            asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         core_tasks = set()
 
         logger.opt(colors=True, raw=True).info(f"<yellow>{self.STARBOT_ASCII_LOGO}</>")
