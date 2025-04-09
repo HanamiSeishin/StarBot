@@ -58,8 +58,8 @@ class PicGenerator:
     def __init__(self,
                  width: int,
                  height: int,
-                 normal_font: str = config.get("PAINTER_NORMAL_FONT"),
-                 bold_font: str = config.get("PAINTER_BOLD_FONT")):
+                 normal_font: Optional[str] = None,
+                 bold_font: Optional[str] = None):
         """
         初始化绘图器
 
@@ -73,6 +73,10 @@ class PicGenerator:
         self.__height = height
         self.__canvas = Image.new("RGBA", (self.width, self.height))
         self.__draw = ImageDraw.Draw(self.__canvas)
+        if normal_font is None:
+            normal_font = config.get("PAINTER_NORMAL_FONT")
+        if bold_font is None:
+            bold_font = config.get("PAINTER_BOLD_FONT")
 
         resource_base_path = os.path.dirname(os.path.dirname(__file__))
         self.__chapter_font = ImageFont.truetype(f"{resource_base_path}/resource/{bold_font}", 50)

@@ -757,7 +757,7 @@ class LiveDanmaku(AsyncEvent):
                 break
 
             if host is None:
-                host = available_hosts.pop()
+                host = available_hosts.pop(0)
 
             port = host['wss_port']
             protocol = "wss"

@@ -4,14 +4,15 @@ from graia.ariadne import Ariadne
 from graia.ariadne.event.message import FriendMessage, GroupMessage
 from graia.ariadne.message.chain import MessageChain
 from graia.ariadne.message.element import Source, At
-from graia.ariadne.message.parser.twilight import Twilight, FullMatch, UnionMatch, ParamMatch, ResultValue, ElementMatch
+from graia.ariadne.message.parser.twilight import Twilight, FullMatch, UnionMatch, ParamMatch, ResultValue, \
+    ElementMatch, SpacePolicy
 from graia.ariadne.model import Friend, Member, Group
 from graia.ariadne.util.interrupt import FunctionWaiter
 from graia.saya import Channel
 from graia.saya.builtins.broadcast import ListenerSchema
 from loguru import logger
 
-from ....utils import config, redis
+from ....utils import config, redis, MessageUtil
 from ....utils.network import request
 from ....utils.utils import remove_command_param_placeholder
 
@@ -26,7 +27,7 @@ channel = Channel.current()
         inline_dispatchers=[Twilight(
             ElementMatch(At, optional=True),
             FullMatch(prefix),
-            UnionMatch("绑定", "bind"),
+            UnionMatch("绑定", "bind").space(SpacePolicy.FORCE),
             "uid" @ ParamMatch()
         )],
     )
@@ -34,8 +35,10 @@ channel = Channel.current()
 async def bind(app: Ariadne,
                source: Source,
                sender: Union[Friend, Group],
-               member: Optional[Member],
+               member: Optional[Member], message: MessageChain,
                uid: MessageChain = ResultValue()):
+    if MessageUtil.check_at_object(app.account, message) is False:
+        return
     logger.info(f"{'群' if isinstance(sender, Group) else '好友'}[{sender.id}] 触发命令 : 绑定")
 
     if isinstance(sender, Group) and await redis.exists_disable_command("DenyBind", sender.id):

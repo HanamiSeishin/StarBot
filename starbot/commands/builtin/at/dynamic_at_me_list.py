@@ -10,7 +10,7 @@ from loguru import logger
 
 from ....core.datasource import DataSource
 from ....core.model import PushType
-from ....utils import config, redis
+from ....utils import config, redis, MessageUtil
 
 prefix = config.get("COMMAND_PREFIX")
 
@@ -27,7 +27,9 @@ channel = Channel.current()
         )],
     )
 )
-async def dynamic_at_me_list(app: Ariadne, source: Source, sender: Group):
+async def dynamic_at_me_list(app: Ariadne, source: Source, sender: Group, message: MessageChain):
+    if MessageUtil.check_at_object(app.account, message) is False:
+        return
     logger.info(f"群[{sender.id}] 触发命令 : 动态@列表")
 
     datasource: DataSource = app.options["StarBotDataSource"]

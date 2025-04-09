@@ -14,7 +14,7 @@ from loguru import logger
 from ....core.datasource import DataSource
 from ....core.model import PushType
 from ....painter.PicGenerator import PicGenerator, Color
-from ....utils import config, redis
+from ....utils import config, redis, MessageUtil
 from ....utils.utils import timestamp_format, get_unames_and_faces_by_uids, mask_round, get_parallel_ranking, get_ratio
 
 prefix = config.get("COMMAND_PREFIX")
@@ -32,7 +32,9 @@ channel = Channel.current()
         )],
     )
 )
-async def user_data_total(app: Ariadne, source: Source, sender: Union[Friend, Group], member: Optional[Member]):
+async def user_data_total(app: Ariadne, source: Source, sender: Union[Friend, Group], member: Optional[Member], message: MessageChain):
+    if MessageUtil.check_at_object(app.account, message) is False:
+        return
     logger.info(f"{'群' if isinstance(sender, Group) else '好友'}[{sender.id}] 触发命令 : 我的总数据")
 
     if isinstance(sender, Group) and await redis.exists_disable_command("DenyUserDataTotal", sender.id):

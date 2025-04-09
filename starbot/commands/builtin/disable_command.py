@@ -2,13 +2,14 @@ from graia.ariadne import Ariadne
 from graia.ariadne.event.message import GroupMessage
 from graia.ariadne.message.chain import MessageChain
 from graia.ariadne.message.element import Source, At
-from graia.ariadne.message.parser.twilight import Twilight, FullMatch, UnionMatch, ParamMatch, ResultValue, ElementMatch
+from graia.ariadne.message.parser.twilight import Twilight, FullMatch, UnionMatch, ParamMatch, ResultValue, \
+    ElementMatch, SpacePolicy
 from graia.ariadne.model import Group, Member, MemberPerm
 from graia.saya import Channel
 from graia.saya.builtins.broadcast import ListenerSchema
 from loguru import logger
 
-from ...utils import config, redis
+from ...utils import config, redis, MessageUtil
 from ...utils.utils import remove_command_param_placeholder
 
 prefix = config.get("COMMAND_PREFIX")
@@ -32,7 +33,7 @@ channel = Channel.current()
         inline_dispatchers=[Twilight(
             ElementMatch(At, optional=True),
             FullMatch(prefix),
-            UnionMatch("禁用", "disable"),
+            UnionMatch("禁用", "disable").space(SpacePolicy.FORCE),
             "name" @ ParamMatch()
         )],
     )
@@ -40,8 +41,10 @@ channel = Channel.current()
 async def disable_command(app: Ariadne,
                           source: Source,
                           group: Group,
-                          member: Member,
+                          member: Member, message: MessageChain,
                           name: MessageChain = ResultValue()):
+    if MessageUtil.check_at_object(app.account, message) is False:
+        return
     if member.permission == MemberPerm.Member and member.id != master:
         await app.send_message(group, MessageChain("您没有执行此命令的权限~"), quote=source)
         return

@@ -11,7 +11,7 @@ from graia.saya.builtins.broadcast import ListenerSchema
 from loguru import logger
 
 from ...painter.PicGenerator import PicGenerator, Color
-from ...utils import config, redis
+from ...utils import config, redis, MessageUtil
 
 prefix = config.get("COMMAND_PREFIX")
 
@@ -28,7 +28,9 @@ channel = Channel.current()
         )],
     )
 )
-async def _help(app: Ariadne, sender: Union[Friend, Group]):
+async def _help(app: Ariadne, sender: Union[Friend, Group], message: MessageChain):
+    if MessageUtil.check_at_object(app.account, message) is False:
+        return
     logger.info(f"{'群' if isinstance(sender, Group) else '好友'}[{sender.id}] 触发命令 : 帮助")
 
     disable_querys = ["DenyRoomData", "DenyRoomDataTotal", "DenyBind", "DenyUserData", "DenyUserDataTotal"]
