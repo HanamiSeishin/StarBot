@@ -28,7 +28,7 @@ saya = Saya.current()
     )
 )
 async def _ReloadPlugins(app: Ariadne, friend: Friend):
-    logger.info(f"触发命令：重载插件 qq[{friend.id}]({friend.nickname})")
+    logger.info(f"触发命令：重载插件 qq[{friend.nickname}]({friend.id})")
     if master_qq != "" and friend.id != master_qq:
         logger.warning(f"重载插件命令主人专用，其他人不可触发")
         return
