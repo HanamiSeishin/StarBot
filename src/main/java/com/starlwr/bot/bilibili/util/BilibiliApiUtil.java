@@ -532,6 +532,16 @@ public class BilibiliApiUtil {
     public Map<Long, Room> getLiveInfoByUids(Set<Long> uids) {
         Map<Long, Room> rooms = new HashMap<>();
 
+        if (uids.size() == 1) {
+            Long uid = uids.iterator().next();
+            Optional<Long> optionalRoomId = bilibili.getRoomIdByUid(uid);
+            if (optionalRoomId.isPresent()) {
+                Room room = bilibili.getLiveInfoByRoomId(optionalRoomId.get());
+                rooms.put(uid, room);
+            }
+            return rooms;
+        }
+
         String api = "https://api.live.bilibili.com/room/v1/Room/get_status_info_by_uids?uids[]=";
 
         List<List<Long>> uidLists = CollectionUtil.splitCollection(uids, 100);
