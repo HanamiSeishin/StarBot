@@ -151,34 +151,6 @@ public class BilibiliDynamicService {
             return;
         }
 
-        List<Up> needFollowUps = dataSource.getUsers(LivePlatform.BILIBILI.getName()).stream()
-                .filter(user -> user.getTargets().stream()
-                        .map(PushTarget::getMessages)
-                        .flatMap(List::stream)
-                        .anyMatch(message -> "com.starlwr.bot.bilibili.event.dynamic.BilibiliDynamicUpdateEvent".equals(message.getEvent()))
-                ).map(Up::new)
-                .toList();
-
-        if (needFollowUps.isEmpty()) {
-            log.info("不存在打开了动态推送但未关注的 UP 主");
-            return;
-        }
-
-        alreadyFollowUps.addAll(bilibili.getFollowingUps());
-        alreadyFollowUps.add(accountService.getAccountInfo());
-
-        List<Up> notFollowUps = new ArrayList<>();
-        CollectionUtil.compareCollectionDiff(alreadyFollowUps, needFollowUps, notFollowUps, new ArrayList<>(), new ArrayList<>());
-
-        if (notFollowUps.isEmpty()) {
-            log.info("不存在打开了动态推送但未关注的 UP 主");
-            return;
-        }
-
-        log.info("检测到 {} 个打开了动态推送但未关注的 UP 主: [{}], 开始自动关注", notFollowUps.size(), notFollowUps.stream().map(up -> up.getUname() + "(" + up.getUid() + ")").collect(Collectors.joining(", ")));
-
-        autoFollowQueue.addAll(notFollowUps);
-
         executor.submit(() -> {
             Thread.currentThread().setName("auto-follow-queue");
 
@@ -211,5 +183,33 @@ public class BilibiliDynamicService {
                 }
             }
         });
+
+        List<Up> needFollowUps = dataSource.getUsers(LivePlatform.BILIBILI.getName()).stream()
+                .filter(user -> user.getTargets().stream()
+                        .map(PushTarget::getMessages)
+                        .flatMap(List::stream)
+                        .anyMatch(message -> "com.starlwr.bot.bilibili.event.dynamic.BilibiliDynamicUpdateEvent".equals(message.getEvent()))
+                ).map(Up::new)
+                .toList();
+
+        if (needFollowUps.isEmpty()) {
+            log.info("不存在打开了动态推送但未关注的 UP 主");
+            return;
+        }
+
+        alreadyFollowUps.addAll(bilibili.getFollowingUps());
+        alreadyFollowUps.add(accountService.getAccountInfo());
+
+        List<Up> notFollowUps = new ArrayList<>();
+        CollectionUtil.compareCollectionDiff(alreadyFollowUps, needFollowUps, notFollowUps, new ArrayList<>(), new ArrayList<>());
+
+        if (notFollowUps.isEmpty()) {
+            log.info("不存在打开了动态推送但未关注的 UP 主");
+            return;
+        }
+
+        log.info("检测到 {} 个打开了动态推送但未关注的 UP 主: [{}], 开始自动关注", notFollowUps.size(), notFollowUps.stream().map(up -> up.getUname() + "(" + up.getUid() + ")").collect(Collectors.joining(", ")));
+
+        autoFollowQueue.addAll(notFollowUps);
     }
 }
