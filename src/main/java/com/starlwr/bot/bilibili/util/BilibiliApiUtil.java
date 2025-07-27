@@ -23,7 +23,6 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.util.Pair;
-import org.springframework.retry.RetryCallback;
 import org.springframework.retry.backoff.FixedBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
@@ -80,6 +79,7 @@ public class BilibiliApiUtil {
     public void init() {
         Map<Class<? extends Throwable>, Boolean> retryableExceptions = new HashMap<>();
         retryableExceptions.put(NetworkException.class, true);
+        retryableExceptions.put(WebClientException.class, true);
 
         SimpleRetryPolicy retryPolicy = new SimpleRetryPolicy(properties.getNetwork().getApiRetryMaxTimes(), retryableExceptions);
         retryTemplate.setRetryPolicy(retryPolicy);
@@ -141,20 +141,16 @@ public class BilibiliApiUtil {
      * @return 请求结果
      */
     public JSONObject requestBilibiliApi(String url, String method, Map<String, String> headers, Map<String, Object> params) {
-        return retryTemplate.execute((RetryCallback<JSONObject, NetworkException>) retryContext -> {
+        return retryTemplate.execute(retryContext -> {
             JSONObject rtn;
             JSONObject result;
 
-            try {
-                if ("GET".equalsIgnoreCase(method)) {
-                    result = http.getJson(url, headers);
-                } else if ("POST".equalsIgnoreCase(method)) {
-                    result = http.postJsonAsForm(url, headers, params);
-                } else {
-                    throw new IllegalArgumentException("不支持的请求方法: " + method);
-                }
-            } catch (WebClientException e) {
-                throw new RequestFailedException("请求失败", e);
+            if ("GET".equalsIgnoreCase(method)) {
+                result = http.getJson(url, headers);
+            } else if ("POST".equalsIgnoreCase(method)) {
+                result = http.postJsonAsForm(url, headers, params);
+            } else {
+                throw new IllegalArgumentException("不支持的请求方法: " + method);
             }
 
             if (!result.containsKey("code")) {
