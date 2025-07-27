@@ -92,7 +92,7 @@ public class BilibiliDataSourceEventListener {
         }
 
         if (properties.getLive().isOnlyConnectNecessaryRooms() && !hasEnabledLiveEvent(user)) {
-            log.info("推送用户 (UID: {}, 昵称: {}, 房间号: {}, 平台: {}) 未监听直播事件, 跳过连接直播间", user.getUid(), user.getUname(), user.getRoomId(), user.getPlatform());
+            log.info("推送用户 (UID: {}, 昵称: {}, 房间号: {}, 平台: {}) 未监听直播事件, 跳过连接直播间", user.getUid(), user.getUname(), user.getRoomId() == null ? "未开通" : user.getRoomId(), user.getPlatform());
             return;
         }
 
@@ -108,7 +108,7 @@ public class BilibiliDataSourceEventListener {
         }
 
         if (properties.getLive().isOnlyConnectNecessaryRooms() && !hasEnabledLiveEvent(user)) {
-            log.info("推送用户 (UID: {}, 昵称: {}, 房间号: {}, 平台: {}) 未监听直播事件, 无需断开直播间连接", user.getUid(), user.getUname(), user.getRoomId(), user.getPlatform());
+            log.info("推送用户 (UID: {}, 昵称: {}, 房间号: {}, 平台: {}) 未监听直播事件, 无需断开直播间连接", user.getUid(), user.getUname(), user.getRoomId() == null ? "未开通" : user.getRoomId(), user.getPlatform());
             return;
         }
 
@@ -129,10 +129,10 @@ public class BilibiliDataSourceEventListener {
 
         if (properties.getLive().isOnlyConnectNecessaryRooms()) {
             if (hasEnabledLiveEvent(user) && !liveRoomService.hasUp(user.getUid())) {
-                log.info("推送用户 (UID: {}, 昵称: {}, 房间号: {}, 平台: {}) 监听了直播事件, 准备连接到直播间", user.getUid(), user.getUname(), user.getRoomId(), user.getPlatform());
+                log.info("推送用户 (UID: {}, 昵称: {}, 房间号: {}, 平台: {}) 监听了直播事件, 准备连接到直播间", user.getUid(), user.getUname(), user.getRoomId() == null ? "未开通" : user.getRoomId(), user.getPlatform());
                 liveRoomService.addUp(new Up(user));
             } else if (!hasEnabledLiveEvent(user) && liveRoomService.hasUp(user.getUid())) {
-                log.info("推送用户 (UID: {}, 昵称: {}, 房间号: {}, 平台: {}) 未监听直播事件, 准备断开直播间连接", user.getUid(), user.getUname(), user.getRoomId(), user.getPlatform());
+                log.info("推送用户 (UID: {}, 昵称: {}, 房间号: {}, 平台: {}) 未监听直播事件, 准备断开直播间连接", user.getUid(), user.getUname(), user.getRoomId() == null ? "未开通" : user.getRoomId(), user.getPlatform());
                 liveRoomService.removeUp(new Up(user));
             }
         }
