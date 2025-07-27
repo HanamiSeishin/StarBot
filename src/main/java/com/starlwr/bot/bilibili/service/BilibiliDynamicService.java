@@ -192,7 +192,7 @@ public class BilibiliDynamicService {
                     log.info("尝试关注 UP 主: {} ({})", up.getUname(), up.getUid());
                     bilibili.followUp(up.getUid());
                     alreadyFollowUps.add(up);
-                    log.info("关注 {} ({}) 成功: ", up.getUname(), up.getUid());
+                    log.info("关注 {} ({}) 成功", up.getUname(), up.getUid());
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     log.error("自动关注中断", e);

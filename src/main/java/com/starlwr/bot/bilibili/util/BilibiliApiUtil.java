@@ -533,6 +533,8 @@ public class BilibiliApiUtil {
             Optional<Long> optionalRoomId = bilibili.getRoomIdByUid(uid);
             if (optionalRoomId.isPresent()) {
                 Room room = bilibili.getLiveInfoByRoomId(optionalRoomId.get());
+                room.setUname(bilibili.getUnameByUid(uid).orElseThrow());
+                room.setFace(bilibili.getFaceByUid(uid).orElseThrow());
                 rooms.put(uid, room);
             }
             return rooms;

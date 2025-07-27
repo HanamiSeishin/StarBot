@@ -42,6 +42,11 @@ public class BilibiliDataSourceService implements DataSourceServiceInterface {
      */
     @Override
     public void completePushUsers(List<PushUser> users) {
+        if (users.size() == 1) {
+            completePushUser(users.get(0));
+            return;
+        }
+
         Map<Long, Room> rooms = bilibili.getLiveInfoByUids(users.stream().map(PushUser::getUid).collect(Collectors.toSet()));
         for (PushUser user: users) {
             Room room = rooms.get(user.getUid());
