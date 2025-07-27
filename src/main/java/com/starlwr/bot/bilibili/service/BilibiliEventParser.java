@@ -345,7 +345,7 @@ public class BilibiliEventParser {
             } else {
                 Long randomGiftId = randomGiftInfo.getLong("original_gift_id");
                 String randomGiftName = randomGiftInfo.getString("original_gift_name");
-                double randomGiftPrice = MathUtil.divide(metaData.getInteger("total_coin"), 1000.0);
+                double randomGiftPrice = MathUtil.divide(randomGiftInfo.getInteger("original_gift_price"), 1000.0);
                 String randomGiftUrl = null;
                 if (completeEvent) {
                     randomGiftUrl = giftService.getGiftInfo(randomGiftId).map(Gift::getUrl).orElse(null);
