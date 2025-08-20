@@ -80,7 +80,7 @@ public class BilibiliAccountService implements ApplicationListener<ApplicationRe
             Long uid = bilibili.getLoginUid();
             accountInfo = bilibili.getUpInfoByUid(uid);
 
-            log.info("B 站账号登录成功, UID: {}, 昵称: {}, 房间号: {}", accountInfo.getUid(), accountInfo.getUname(), accountInfo.getRoomId() == null ? "未开通" : accountInfo.getRoomId());
+            log.info("B 站账号登录成功, UID: {}, 昵称: {}, 房间号: {}", accountInfo.getUid(), accountInfo.getUname(), accountInfo.getRoomIdString());
         } catch (ResponseCodeException e) {
             if (e.getCode() == -101) {
                 log.warn("尝试登录 B 站账号失败, 可能的原因为登录凭据填写不正确或已失效, 将触发扫码登录流程");
@@ -137,7 +137,7 @@ public class BilibiliAccountService implements ApplicationListener<ApplicationRe
                     System.exit(0);
                 }
 
-                log.info("B 站账号登录成功, UID: {}, 昵称: {}, 房间号: {}", accountInfo.getUid(), accountInfo.getUname(), accountInfo.getRoomId() == null ? "未开通" : accountInfo.getRoomId());
+                log.info("B 站账号登录成功, UID: {}, 昵称: {}, 房间号: {}", accountInfo.getUid(), accountInfo.getUname(), accountInfo.getRoomIdString());
 
                 loginUrl = "";
 

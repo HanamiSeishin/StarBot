@@ -60,7 +60,7 @@ public class BilibiliLiveOnPushHandler implements StarBotEventHandler {
             title = room.getTitle();
             cover = "{image_url=" + room.getCover() + "}";
         } catch (Exception e) {
-            log.error("获取 Bilibili 直播间信息失败, UID: {}, 昵称: {}, 房间号: {}", event.getSource().getUid(), event.getSource().getUname(), event.getSource().getRoomId() == null ? "未开通" : event.getSource().getRoomId(), e);
+            log.error("获取 Bilibili 直播间信息失败, UID: {}, 昵称: {}, 房间号: {}", event.getSource().getUid(), event.getSource().getUname(), event.getSource().getRoomIdString(), e);
         }
 
         JSONObject params = pushMessage.getParamsJsonObject();

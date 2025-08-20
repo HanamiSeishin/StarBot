@@ -84,7 +84,7 @@ public class BilibiliLiveRoomService {
         }
 
         if (ups.containsKey(up.getUid())) {
-            log.warn("{}(UID: {}, 房间号: {}) 已存在于监听列表中, 无需重复添加", up.getUname(), up.getUid(), up.getRoomId() == null ? "未开通" : up.getRoomId());
+            log.warn("{}(UID: {}, 房间号: {}) 已存在于监听列表中, 无需重复添加", up.getUname(), up.getUid(), up.getRoomIdString());
             return;
         }
 
@@ -138,7 +138,7 @@ public class BilibiliLiveRoomService {
      */
     public synchronized void removeUp(Up up) {
         if (!ups.containsKey(up.getUid())) {
-            log.warn("{}(UID: {}, 房间号: {}) 不存在于监听列表中, 无需移除", up.getUname(), up.getUid(), up.getRoomId() == null ? "未开通" : up.getRoomId());
+            log.warn("{}(UID: {}, 房间号: {}) 不存在于监听列表中, 无需移除", up.getUname(), up.getUid(), up.getRoomIdString());
             return;
         }
 

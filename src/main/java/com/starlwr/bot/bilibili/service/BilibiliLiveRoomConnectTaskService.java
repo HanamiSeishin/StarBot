@@ -38,7 +38,7 @@ public class BilibiliLiveRoomConnectTaskService {
                     ConnectTask task = taskQueue.take();
                     synchronized (BilibiliLiveRoomConnectTaskService.this) {
                         Up up = task.getConnector().getUp();
-                        log.info("从直播间连接队列中取出 {}(UID: {}, 房间号: {}), 当前直播间连接队列长度: {}", up.getUname(), up.getUid(), up.getRoomId() == null ? "未开通" : up.getRoomId(), taskQueue.size());
+                        log.info("从直播间连接队列中取出 {}(UID: {}, 房间号: {}), 当前直播间连接队列长度: {}", up.getUname(), up.getUid(), up.getRoomIdString(), taskQueue.size());
                         task.call();
                     }
                     Thread.sleep(properties.getLive().getLiveRoomConnectInterval());
@@ -61,12 +61,12 @@ public class BilibiliLiveRoomConnectTaskService {
 
         ConnectTask task = new ConnectTask(connector);
         if (taskQueue.contains(task)) {
-            log.warn("{}(UID: {}, 房间号: {}) 已存在于任务队列中, 无需重复添加", up.getUname(), up.getUid(), up.getRoomId() == null ? "未开通" : up.getRoomId());
+            log.warn("{}(UID: {}, 房间号: {}) 已存在于任务队列中, 无需重复添加", up.getUname(), up.getUid(), up.getRoomIdString());
             return false;
         }
 
         taskQueue.add(task);
-        log.info("已将 {}(UID: {}, 房间号: {}) 添加至直播间连接队列中, 当前直播间连接队列长度: {}", up.getUname(), up.getUid(), up.getRoomId() == null ? "未开通" : up.getRoomId(), taskQueue.size());
+        log.info("已将 {}(UID: {}, 房间号: {}) 添加至直播间连接队列中, 当前直播间连接队列长度: {}", up.getUname(), up.getUid(), up.getRoomIdString(), taskQueue.size());
 
         return true;
     }
@@ -82,10 +82,10 @@ public class BilibiliLiveRoomConnectTaskService {
         ConnectTask task = new ConnectTask(connector);
         if (taskQueue.contains(task)) {
             if (taskQueue.remove(task)) {
-                log.info("已将 {}(UID: {}, 房间号: {}) 从直播间连接队列中移除, 当前直播间连接队列长度: {}", up.getUname(), up.getUid(), up.getRoomId() == null ? "未开通" : up.getRoomId(), taskQueue.size());
+                log.info("已将 {}(UID: {}, 房间号: {}) 从直播间连接队列中移除, 当前直播间连接队列长度: {}", up.getUname(), up.getUid(), up.getRoomIdString(), taskQueue.size());
                 return true;
             } else {
-                log.error("从任务队列移除 {}(UID: {}, 房间号: {}) 的直播间连接任务失败", up.getUname(), up.getUid(), up.getRoomId() == null ? "未开通" : up.getRoomId());
+                log.error("从任务队列移除 {}(UID: {}, 房间号: {}) 的直播间连接任务失败", up.getUname(), up.getUid(), up.getRoomIdString());
             }
         }
 
