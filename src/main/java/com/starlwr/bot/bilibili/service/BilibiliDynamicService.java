@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 
 import java.time.Instant;
 import java.util.*;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
  * Bilibili 动态服务
  */
 @Slf4j
+@Order(-30000)
 @StarBotComponent
 public class BilibiliDynamicService {
     private static final Logger dynamicLogger = LoggerFactory.getLogger("DynamicLogger");
@@ -59,6 +61,12 @@ public class BilibiliDynamicService {
 
     private final Set<String> dynamicIds = new HashSet<>();
 
+    @EventListener(StarBotDataSourceLoadCompleteEvent.class)
+    public void handleLoadCompleteEvent() {
+        startDynamicPush();
+        autoFollowUps();
+    }
+
     /**
      * 关注 UP 主
      * @param up UP 主
@@ -69,12 +77,6 @@ public class BilibiliDynamicService {
         }
 
         autoFollowQueue.add(up);
-    }
-
-    @EventListener(StarBotDataSourceLoadCompleteEvent.class)
-    public void handleLoadCompleteEvent() {
-        startDynamicPush();
-        autoFollowUps();
     }
 
     /**

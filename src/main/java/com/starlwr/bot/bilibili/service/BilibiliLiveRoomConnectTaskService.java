@@ -8,6 +8,7 @@ import com.starlwr.bot.core.plugin.StarBotComponent;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -18,6 +19,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  * Bilibili 直播间连接任务管理服务
  */
 @Slf4j
+@Order(0)
 @StarBotComponent
 public class BilibiliLiveRoomConnectTaskService {
     @Resource

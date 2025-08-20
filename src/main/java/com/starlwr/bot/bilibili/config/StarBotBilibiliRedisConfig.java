@@ -2,12 +2,12 @@ package com.starlwr.bot.bilibili.config;
 
 import com.starlwr.bot.core.enums.LivePlatform;
 import com.starlwr.bot.core.plugin.StarBotComponent;
+import com.starlwr.bot.core.service.RedisService;
 import com.starlwr.bot.core.util.RedisUtil;
 import jakarta.annotation.Resource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
-import org.springframework.data.redis.core.StringRedisTemplate;
 
 /**
  * StarBotBilibili Redis 配置类
@@ -16,11 +16,11 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 @Configuration
 @StarBotComponent
 public class StarBotBilibiliRedisConfig {
-    @Resource(name = "stringRedisTemplate")
-    private StringRedisTemplate redisTemplate;
+    @Resource
+    private RedisService redisService;
 
     @Bean
     public RedisUtil bilibiliRedis() {
-        return new RedisUtil(LivePlatform.BILIBILI.getName(), redisTemplate);
+        return redisService.getRedis(LivePlatform.BILIBILI.getName());
     }
 }
