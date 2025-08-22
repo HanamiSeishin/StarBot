@@ -22,15 +22,15 @@ public class StarBotBilibiliLogConfig {
     public void init() {
         LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
 
-        Appender<ILoggingEvent> rawMessageAppender = new BilibiliLiveLogFileAppender();
-        rawMessageAppender.setName("RawMessageAppender");
-        rawMessageAppender.setContext(context);
-        rawMessageAppender.start();
+        Appender<ILoggingEvent> liveMessageAppender = new BilibiliLiveLogFileAppender();
+        liveMessageAppender.setName("LiveMessageAppender");
+        liveMessageAppender.setContext(context);
+        liveMessageAppender.start();
 
-        Logger rawMessageLogger = context.getLogger("RawMessageLogger");
-        rawMessageLogger.setLevel(Level.DEBUG);
-        rawMessageLogger.setAdditive(false);
-        rawMessageLogger.addAppender(rawMessageAppender);
+        Logger liveMessageLogger = context.getLogger("LiveMessageLogger");
+        liveMessageLogger.setLevel(Level.DEBUG);
+        liveMessageLogger.setAdditive(false);
+        liveMessageLogger.addAppender(liveMessageAppender);
 
         Appender<ILoggingEvent> dynamicAppender = new BilibiliDynamicLogFileAppender();
         dynamicAppender.setName("DynamicAppender");

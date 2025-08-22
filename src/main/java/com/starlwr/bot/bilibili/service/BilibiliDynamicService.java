@@ -14,6 +14,7 @@ import com.starlwr.bot.core.model.PushTarget;
 import com.starlwr.bot.core.model.PushUser;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.util.CollectionUtil;
+import com.starlwr.bot.core.util.FixedSizeSetQueue;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -59,7 +60,7 @@ public class BilibiliDynamicService {
 
     private final Set<Up> alreadyFollowUps = new HashSet<>();
 
-    private final Set<String> dynamicIds = new HashSet<>();
+    private final FixedSizeSetQueue<String> dynamicIds = new FixedSizeSetQueue<>(1000);
 
     @EventListener(StarBotDataSourceLoadCompleteEvent.class)
     public void handleLoadCompleteEvent() {

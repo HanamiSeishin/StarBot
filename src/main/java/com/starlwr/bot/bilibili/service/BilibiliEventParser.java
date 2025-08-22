@@ -33,7 +33,7 @@ import java.util.function.BiFunction;
 @Slf4j
 @StarBotComponent
 public class BilibiliEventParser {
-    private static final Logger rawMessageLogger = LoggerFactory.getLogger("RawMessageLogger");
+    private static final Logger liveMessageLogger = LoggerFactory.getLogger("LiveMessageLogger");
 
     @Resource
     private StarBotBilibiliProperties properties;
@@ -64,7 +64,7 @@ public class BilibiliEventParser {
     public Optional<StarBotBaseLiveEvent> parse(JSONObject data, LiveStreamerInfo source) {
         String type = data.getString("cmd");
         if (properties.getDebug().isLiveRoomRawMessageLog()) {
-            rawMessageLogger.debug("{}: {} -> {}", type, source.getRoomId(), data.toJSONString());
+            liveMessageLogger.debug("{}: {} -> {}", type, source.getRoomId(), data.toJSONString());
         }
 
         if (parsers.containsKey(type)) {
