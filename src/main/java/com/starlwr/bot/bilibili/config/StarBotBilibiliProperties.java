@@ -173,5 +173,10 @@ public class StarBotBilibiliProperties {
          * 是否自动保存绘制的动态图片
          */
         private boolean autoSaveImage = false;
+
+        /**
+         * 推送动态的时间范围，仅推送该时间内的动态，超时不再推送，设置为 0 为不限制，单位：分钟
+         */
+        private int pushMinutes = 1440;
     }
 }

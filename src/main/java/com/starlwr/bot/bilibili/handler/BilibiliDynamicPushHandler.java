@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
@@ -71,17 +73,27 @@ public class BilibiliDynamicPushHandler implements StarBotEventHandler {
         BilibiliDynamicUpdateEvent event = (BilibiliDynamicUpdateEvent) baseEvent;
         JSONObject params = pushMessage.getParamsJsonObject();
 
+        int pushMinutes = properties.getDynamic().getPushMinutes();
+        if (pushMinutes > 0) {
+            Instant timestamp = Instant.ofEpochSecond(event.getDynamic().getModules().getJSONObject("module_author").getInteger("pub_ts"));
+            Instant now = Instant.now();
+            if (timestamp.isBefore(now.minus(pushMinutes, ChronoUnit.MINUTES))) {
+                log.info("[{}] {} 的动态发表时间在 {} 分钟前, 跳过推送", event.getPlatform(), event.getSource().getUname(), pushMinutes);
+                return;
+            }
+        }
+
         String type = event.getDynamic().getType();
         JSONArray whiteList = params.getJSONArray("white_list");
         JSONArray blackList = params.getJSONArray("black_list");
         if (!CollectionUtils.isEmpty(whiteList)) {
             if (!whiteList.contains(type)) {
-                log.info("[{}] {} 的动态类型 {} 不在白名单中，跳过推送", event.getPlatform(), event.getSource().getUname(), type);
+                log.info("[{}] {} 的动态类型 {} 不在白名单中, 跳过推送", event.getPlatform(), event.getSource().getUname(), type);
                 return;
             }
         } else if (!CollectionUtils.isEmpty(blackList)) {
             if (blackList.contains(type)) {
-                log.info("[{}] {} 的动态类型 {} 在黑名单中，跳过推送", event.getPlatform(), event.getSource().getUname(), type);
+                log.info("[{}] {} 的动态类型 {} 在黑名单中, 跳过推送", event.getPlatform(), event.getSource().getUname(), type);
                 return;
             }
         }
@@ -90,7 +102,7 @@ public class BilibiliDynamicPushHandler implements StarBotEventHandler {
         if ("DYNAMIC_TYPE_FORWARD".equals(type) && onlySelfOrigin) {
             Long originUid = event.getDynamic().getOrigin().getModules().getJSONObject("module_author").getLong("mid");
             if (!event.getSource().getUid().equals(originUid)) {
-                log.info("[{}] {} 的转发动态源作者不为自己，跳过推送", event.getPlatform(), event.getSource().getUname());
+                log.info("[{}] {} 的转发动态源作者不为自己, 跳过推送", event.getPlatform(), event.getSource().getUname());
                 return;
             }
         }
