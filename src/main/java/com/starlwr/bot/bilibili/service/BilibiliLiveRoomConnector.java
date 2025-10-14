@@ -20,6 +20,8 @@ import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.util.FixedSizeSetQueue;
 import jakarta.annotation.Resource;
 import jakarta.websocket.ClientEndpoint;
+import jakarta.websocket.ContainerProvider;
+import jakarta.websocket.WebSocketContainer;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -162,7 +164,9 @@ public class BilibiliLiveRoomConnector {
                 WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
                 headers.add("User-Agent", properties.getNetwork().getUserAgent());
 
-                StandardWebSocketClient webSocketClient = new StandardWebSocketClient();
+                WebSocketContainer container = ContainerProvider.getWebSocketContainer();
+                container.setDefaultMaxBinaryMessageBufferSize(8 * 1024 * 1024);
+                StandardWebSocketClient webSocketClient = new StandardWebSocketClient(container);
                 BilibiliWebSocketHandler handler = new BilibiliWebSocketHandler(this, interval);
                 CompletableFuture<WebSocketSession> sessionFuture = webSocketClient.execute(handler, headers, URI.create(url));
 
@@ -590,7 +594,7 @@ public class BilibiliLiveRoomConnector {
                 } else {
                     connector.status = ConnectStatus.ERROR;
                     if (connector.received) {
-                        log.warn("与 {} 的直播间 {} 连接断开, 将在 {} 秒后重新连接", up.getUname(), up.getRoomId(), interval / 1000);
+                        log.warn("与 {} 的直播间 {} 连接断开 ({}: {}), 将在 {} 秒后重新连接", up.getUname(), up.getRoomId(), closeStatus.getCode(), closeStatus.getReason(), interval / 1000);
                     } else {
                         log.error("与 {} 的直播间 {} 连接异常, 自连接建立后未收到响应数据, 将在 {} 秒后重新连接", up.getUname(), up.getRoomId(), interval / 1000);
                     }
