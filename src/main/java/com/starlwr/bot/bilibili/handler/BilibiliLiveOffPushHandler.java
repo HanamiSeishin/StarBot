@@ -10,10 +10,12 @@ import com.starlwr.bot.core.model.PushMessage;
 import com.starlwr.bot.core.model.PushTarget;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.sender.StarBotPushMessageSender;
+import com.starlwr.bot.core.service.LiveDataService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * <h3>Bilibili 下播推送处理器</h3>
@@ -26,6 +28,9 @@ import java.util.List;
  * <h4>推送消息模版支持的参数：</h4>
  * <ul>
  *     <li>{uname}: 昵称</li>
+ *     <li>{hours}: 直播小时数</li>
+ *     <li>{minutes}: 直播分钟数</li>
+ *     <li>{seconds}: 直播秒数</li>
  * </ul>
  * <h4>默认参数:</h4>
  * <pre>
@@ -41,14 +46,32 @@ public class BilibiliLiveOffPushHandler implements StarBotEventHandler {
     @Resource
     private StarBotPushMessageSender sender;
 
+    @Resource
+    private LiveDataService liveDataService;
+
     @Override
     public void handle(StarBotExternalBaseEvent baseEvent, PushMessage pushMessage) {
         BilibiliLiveOffEvent event = (BilibiliLiveOffEvent) baseEvent;
 
         JSONObject params = pushMessage.getParamsJsonObject();
 
+        long hours = 0;
+        long minutes = 0;
+        long seconds = 0;
+        Optional<Long> optionalLiveStartTime = liveDataService.getLiveStartTime(event.getPlatform(), event.getSource().getUid());
+        Optional<Long> optionalLiveEndTime = liveDataService.getLiveEndTime(event.getPlatform(), event.getSource().getUid());
+        if (optionalLiveStartTime.isPresent() && optionalLiveEndTime.isPresent()) {
+            long duration = (optionalLiveEndTime.get() - optionalLiveStartTime.get()) / 1000;
+            hours = duration / 3600;
+            minutes = (duration % 3600) / 60;
+            seconds = duration % 60;
+        }
+
         String raw = params.getString("message");
-        String content = raw.replace("{uname}", event.getSource().getUname());
+        String content = raw.replace("{uname}", event.getSource().getUname())
+                .replace("{hours}", String.valueOf(hours))
+                .replace("{minutes}", String.valueOf(minutes))
+                .replace("{seconds}", String.valueOf(seconds));
 
         PushTarget target = pushMessage.getTarget();
         List<Message> messages = Message.create(target.getPlatform(), target.getType(), target.getNum(), content);

@@ -6,7 +6,7 @@ import com.starlwr.bot.bilibili.util.BilibiliApiUtil;
 import com.starlwr.bot.core.model.PushUser;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.service.DataSourceService;
-import com.starlwr.bot.core.service.DataSourceServiceInterface;
+import com.starlwr.bot.core.service.DataSourceServiceConfig;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,8 +19,8 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @StarBotComponent
-@DataSourceService(name = "bilibili")
-public class BilibiliDataSourceService implements DataSourceServiceInterface {
+@DataSourceServiceConfig(name = "bilibili")
+public class BilibiliDataSourceService implements DataSourceService {
     @Resource
     private BilibiliApiUtil bilibili;
 
