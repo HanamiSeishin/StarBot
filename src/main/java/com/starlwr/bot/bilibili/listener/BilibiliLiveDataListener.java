@@ -4,17 +4,17 @@ import com.starlwr.bot.bilibili.config.StarBotBilibiliProperties;
 import com.starlwr.bot.bilibili.model.Room;
 import com.starlwr.bot.bilibili.util.BilibiliApiUtil;
 import com.starlwr.bot.core.enums.LivePlatform;
+import com.starlwr.bot.core.event.datasource.StarBotBaseDataSourceEvent;
 import com.starlwr.bot.core.event.datasource.change.StarBotDataSourceAddEvent;
 import com.starlwr.bot.core.event.datasource.change.StarBotDataSourceUpdateEvent;
 import com.starlwr.bot.core.event.datasource.other.StarBotDataSourceLoadCompleteEvent;
 import com.starlwr.bot.core.model.PushUser;
 import com.starlwr.bot.core.plugin.StarBotComponent;
-import com.starlwr.bot.core.util.RedisUtil;
+import com.starlwr.bot.core.service.LiveDataService;
 import jakarta.annotation.Resource;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Profile;
-import org.springframework.context.event.EventListener;
+import org.springframework.context.ApplicationListener;
 import org.springframework.core.annotation.Order;
 
 import java.util.Map;
@@ -25,67 +25,37 @@ import java.util.stream.Collectors;
 /**
  * Bilibili 直播数据监听器
  */
-@Profile("!core")
 @Slf4j
 @Order(-20000)
 @StarBotComponent
-public class BilibiliLiveDataListener {
+public class BilibiliLiveDataListener implements ApplicationListener<StarBotBaseDataSourceEvent> {
     @Resource
     private StarBotBilibiliProperties properties;
 
     @Resource
-    @Qualifier("bilibiliRedis")
-    private RedisUtil redis;
+    private BilibiliApiUtil bilibili;
 
     @Resource
-    private BilibiliApiUtil bilibili;
+    private LiveDataService liveDataService;
 
     private boolean loadCompleted = false;
 
-    /**
-     * 更新 Redis 中的直播间信息
-     * @param room 直播间信息
-     */
-    private void updateRedisRoomInfo(Room room) {
-        Long uid = room.getUid();
-        boolean status = room.getLiveStatus() == 1;
-
-        Optional<Boolean> optionalLastStatus = redis.getLiveStatus(uid);
-        if (optionalLastStatus.isEmpty()) {
-            // 无状态记录，新增的主播，直接写入状态，若正在直播，写入开播时间
-            redis.setLiveStatus(uid, status);
-            if (status) {
-                redis.setLiveStartTime(uid, room.getLiveStartTime());
-            }
-        } else {
-            boolean lastStatus = optionalLastStatus.get();
-            if (lastStatus) {
-                if (status) {
-                    Long lastStartTime = redis.getLiveStartTime(uid).orElseThrow();
-                    if (!lastStartTime.equals(room.getLiveStartTime())) {
-                        // 记录的状态与当前状态均为正在直播，但记录的开播时间与当前开播时间不一致，为程序退出期间下播再次开播，重置直播数据，写入开播时间，删除下播时间
-                        redis.resetLiveData(uid);
-                        redis.setLiveStartTime(uid, room.getLiveStartTime());
-                        redis.deleteLiveEndTime(uid);
-                    }
-                } else {
-                    // 记录的状态为正在直播，当前状态为未开播，为程序退出期间下播，更新状态
-                    redis.setLiveStatus(uid, false);
-                }
-            } else {
-                if (status) {
-                    // 记录的状态为未开播，存在记录的开播时间，当前状态为正在直播，为程序退出期间开播，重置直播数据，更新状态，写入开播时间，删除下播时间（可能不存在）
-                    redis.resetLiveData(uid);
-                    redis.setLiveStatus(uid, true);
-                    redis.setLiveStartTime(uid, room.getLiveStartTime());
-                    redis.deleteLiveEndTime(uid);
-                }
-            }
+    @Override
+    public void onApplicationEvent(@NonNull StarBotBaseDataSourceEvent event) {
+        if (event instanceof StarBotDataSourceAddEvent e) {
+            onStarBotDataSourceAddEvent(e);
+        } else if (event instanceof StarBotDataSourceUpdateEvent e) {
+            onStarBotDataSourceUpdateEvent(e);
+        } else if (event instanceof StarBotDataSourceLoadCompleteEvent e) {
+            onStarBotDataSourceLoadCompleteEvent(e);
         }
     }
 
-    @EventListener
-    public void handleAddEvent(StarBotDataSourceAddEvent event) {
+    /**
+     * 数据源推送用户添加事件
+     * @param event 事件
+     */
+    public void onStarBotDataSourceAddEvent(@NonNull StarBotDataSourceAddEvent event) {
         PushUser user = event.getUser();
 
         if (!LivePlatform.BILIBILI.getName().equals(user.getPlatform())) {
@@ -94,12 +64,15 @@ public class BilibiliLiveDataListener {
 
         if (loadCompleted && user.getRoomId() != null && (!properties.getLive().isOnlyConnectNecessaryRooms() || user.hasEnabledLiveEvent())) {
             Room room = bilibili.getLiveInfoByRoomId(user.getRoomId());
-            updateRedisRoomInfo(room);
+            updateRoomInfo(room);
         }
     }
 
-    @EventListener
-    public void handleUpdateEvent(StarBotDataSourceUpdateEvent event) {
+    /**
+     * 数据源推送用户更新事件
+     * @param event 事件
+     */
+    public void onStarBotDataSourceUpdateEvent(@NonNull StarBotDataSourceUpdateEvent event) {
         PushUser oldUser = event.getOldUser();
         PushUser user = event.getUser();
 
@@ -113,12 +86,15 @@ public class BilibiliLiveDataListener {
 
         if (shouldUpdate) {
             Room room = bilibili.getLiveInfoByRoomId(user.getRoomId());
-            updateRedisRoomInfo(room);
+            updateRoomInfo(room);
         }
     }
 
-    @EventListener
-    public void handleLoadCompleteEvent(StarBotDataSourceLoadCompleteEvent event) {
+    /**
+     * 数据源加载完毕事件
+     * @param event 事件
+     */
+    public void onStarBotDataSourceLoadCompleteEvent(@NonNull StarBotDataSourceLoadCompleteEvent event) {
         loadCompleted = true;
 
         Set<Long> uids = event.getUsers().stream()
@@ -130,7 +106,54 @@ public class BilibiliLiveDataListener {
         Map<Long, Room> liveInfos = bilibili.getLiveInfoByUids(uids);
 
         for (Room room : liveInfos.values()) {
-            updateRedisRoomInfo(room);
+            updateRoomInfo(room);
+        }
+    }
+
+    @Override
+    public boolean supportsAsyncExecution() {
+        return false;
+    }
+
+    /**
+     * 更新直播间信息
+     * @param room 直播间信息
+     */
+    private void updateRoomInfo(Room room) {
+        Long uid = room.getUid();
+        boolean status = room.getLiveStatus() == 1;
+
+        Optional<Boolean> optionalLastStatus = liveDataService.getLiveStatus(LivePlatform.BILIBILI.getName(), uid);
+        if (optionalLastStatus.isEmpty()) {
+            // 无状态记录，新增的主播，直接写入状态，若正在直播，写入开播时间
+            liveDataService.setLiveStatus(LivePlatform.BILIBILI.getName(), uid, status);
+            if (status) {
+                liveDataService.setLiveStartTime(LivePlatform.BILIBILI.getName(), uid, room.getLiveStartTime());
+            }
+        } else {
+            boolean lastStatus = optionalLastStatus.get();
+            if (lastStatus) {
+                if (status) {
+                    Long lastStartTime = liveDataService.getLiveStartTime(LivePlatform.BILIBILI.getName(), uid).orElseThrow();
+                    if (!lastStartTime.equals(room.getLiveStartTime())) {
+                        // 记录的状态与当前状态均为正在直播，但记录的开播时间与当前开播时间不一致，为程序退出期间下播再次开播，重置直播数据，写入开播时间，删除下播时间
+                        liveDataService.resetLiveData(LivePlatform.BILIBILI.getName(), uid);
+                        liveDataService.setLiveStartTime(LivePlatform.BILIBILI.getName(), uid, room.getLiveStartTime());
+                        liveDataService.deleteLiveEndTime(LivePlatform.BILIBILI.getName(), uid);
+                    }
+                } else {
+                    // 记录的状态为正在直播，当前状态为未开播，为程序退出期间下播，更新状态
+                    liveDataService.setLiveStatus(LivePlatform.BILIBILI.getName(), uid, false);
+                }
+            } else {
+                if (status) {
+                    // 记录的状态为未开播，存在记录的开播时间，当前状态为正在直播，为程序退出期间开播，重置直播数据，更新状态，写入开播时间，删除下播时间（可能不存在）
+                    liveDataService.resetLiveData(LivePlatform.BILIBILI.getName(), uid);
+                    liveDataService.setLiveStatus(LivePlatform.BILIBILI.getName(), uid, true);
+                    liveDataService.setLiveStartTime(LivePlatform.BILIBILI.getName(), uid, room.getLiveStartTime());
+                    liveDataService.deleteLiveEndTime(LivePlatform.BILIBILI.getName(), uid);
+                }
+            }
         }
     }
 }

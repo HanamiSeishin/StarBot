@@ -6,8 +6,9 @@ import com.starlwr.bot.bilibili.model.Up;
 import com.starlwr.bot.core.event.datasource.other.StarBotDataSourceLoadCompleteEvent;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import jakarta.annotation.Resource;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
+import org.springframework.context.ApplicationListener;
 import org.springframework.core.annotation.Order;
 
 import java.util.concurrent.BlockingQueue;
@@ -21,7 +22,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 @Slf4j
 @Order(0)
 @StarBotComponent
-public class BilibiliLiveRoomConnectTaskService {
+public class BilibiliLiveRoomConnectTaskService implements ApplicationListener<StarBotDataSourceLoadCompleteEvent> {
     @Resource
     private StarBotBilibiliProperties properties;
 
@@ -29,8 +30,8 @@ public class BilibiliLiveRoomConnectTaskService {
 
     private final BlockingQueue<ConnectTask> taskQueue = new LinkedBlockingQueue<>();
 
-    @EventListener(StarBotDataSourceLoadCompleteEvent.class)
-    public void handleLoadCompleteEvent() {
+    @Override
+    public void onApplicationEvent(@NonNull StarBotDataSourceLoadCompleteEvent event) {
         executor.submit(() -> {
             Thread.currentThread().setName("bilibili-queue");
             while (!Thread.currentThread().isInterrupted()) {
@@ -49,6 +50,11 @@ public class BilibiliLiveRoomConnectTaskService {
                 }
             }
         });
+    }
+
+    @Override
+    public boolean supportsAsyncExecution() {
+        return false;
     }
 
     /**

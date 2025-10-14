@@ -16,11 +16,12 @@ import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.util.CollectionUtil;
 import com.starlwr.bot.core.util.FixedSizeSetQueue;
 import jakarta.annotation.Resource;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.event.EventListener;
+import org.springframework.context.ApplicationListener;
 import org.springframework.core.annotation.Order;
 
 import java.time.Instant;
@@ -34,7 +35,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Order(-30000)
 @StarBotComponent
-public class BilibiliDynamicService {
+public class BilibiliDynamicService implements ApplicationListener<StarBotDataSourceLoadCompleteEvent> {
     private static final Logger dynamicLogger = LoggerFactory.getLogger("DynamicLogger");
 
     @Resource
@@ -62,10 +63,15 @@ public class BilibiliDynamicService {
 
     private final FixedSizeSetQueue<String> dynamicIds = new FixedSizeSetQueue<>(1000);
 
-    @EventListener(StarBotDataSourceLoadCompleteEvent.class)
-    public void handleLoadCompleteEvent() {
+    @Override
+    public void onApplicationEvent(@NonNull StarBotDataSourceLoadCompleteEvent event) {
         startDynamicPush();
         autoFollowUps();
+    }
+
+    @Override
+    public boolean supportsAsyncExecution() {
+        return false;
     }
 
     /**
