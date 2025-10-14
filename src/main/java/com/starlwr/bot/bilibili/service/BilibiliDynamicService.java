@@ -122,6 +122,10 @@ public class BilibiliDynamicService implements ApplicationListener<StarBotDataSo
                     if (optionalUser.isPresent()) {
                         PushUser user = optionalUser.get();
 
+                        if (!user.hasEnabledDynamicEvent()) {
+                            continue;
+                        }
+
                         String action;
                         switch (dynamic.getType()) {
                             case "DYNAMIC_TYPE_ARTICLE" -> action = "投稿了新文章";
@@ -148,7 +152,7 @@ public class BilibiliDynamicService implements ApplicationListener<StarBotDataSo
             }
         }, interval, interval, TimeUnit.SECONDS);
 
-        log.info("动态推送服务已启动");
+        log.info("bilibili 动态推送服务已启动");
     }
 
     /**
