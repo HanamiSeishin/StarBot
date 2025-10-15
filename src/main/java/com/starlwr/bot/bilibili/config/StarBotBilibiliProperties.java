@@ -103,6 +103,11 @@ public class StarBotBilibiliProperties {
     @Setter
     public static class Live {
         /**
+         * 是否启用直播间连接
+         */
+        private boolean enableConnectLiveRoom = true;
+
+        /**
          * 是否仅连接启用了直播推送的直播间
          */
         private boolean onlyConnectNecessaryRooms = false;
@@ -141,6 +146,16 @@ public class StarBotBilibiliProperties {
          * 直播间数据风控检测阈值，范围：0 ~ 100，数值越高检测越严格
          */
         private int autoDetectLiveRoomRiskRatio = 50;
+
+        /**
+         * 是否启用备用直播推送
+         */
+        private boolean backupLivePush = true;
+
+        /**
+         * 备用直播推送检测时间间隔，单位：秒
+         */
+        private int backupLivePushInterval = 10;
     }
 
     /**

@@ -53,7 +53,7 @@ public class BilibiliDataSourceEventListener implements ApplicationListener<Star
      * 数据源推送用户添加事件
      * @param event 事件
      */
-    public void onStarBotDataSourceAddEvent(StarBotDataSourceAddEvent event) {
+    private void onStarBotDataSourceAddEvent(StarBotDataSourceAddEvent event) {
         PushUser user = event.getUser();
 
         if (!LivePlatform.BILIBILI.getName().equals(user.getPlatform())) {
@@ -62,6 +62,10 @@ public class BilibiliDataSourceEventListener implements ApplicationListener<Star
 
         if (properties.getDynamic().isAutoFollow() && loadCompleted && user.hasEnabledDynamicEvent()) {
             dynamicService.followUp(new Up(user));
+        }
+
+        if (!properties.getLive().isEnableConnectLiveRoom()) {
+            return;
         }
 
         if (properties.getLive().isOnlyConnectNecessaryRooms() && !user.hasEnabledLiveEvent()) {
@@ -76,10 +80,14 @@ public class BilibiliDataSourceEventListener implements ApplicationListener<Star
      * 数据源推送用户移除事件
      * @param event 事件
      */
-    public void onStarBotDataSourceRemoveEvent(StarBotDataSourceRemoveEvent event) {
+    private void onStarBotDataSourceRemoveEvent(StarBotDataSourceRemoveEvent event) {
         PushUser user = event.getUser();
 
         if (!LivePlatform.BILIBILI.getName().equals(user.getPlatform())) {
+            return;
+        }
+
+        if (!properties.getLive().isEnableConnectLiveRoom()) {
             return;
         }
 
@@ -95,7 +103,7 @@ public class BilibiliDataSourceEventListener implements ApplicationListener<Star
      * 数据源推送用户移除事件
      * @param event 事件
      */
-    public void onStarBotDataSourceUpdateEvent(StarBotDataSourceUpdateEvent event) {
+    private void onStarBotDataSourceUpdateEvent(StarBotDataSourceUpdateEvent event) {
         PushUser oldUser = event.getOldUser();
         PushUser user = event.getUser();
 
@@ -105,6 +113,10 @@ public class BilibiliDataSourceEventListener implements ApplicationListener<Star
 
         if (properties.getDynamic().isAutoFollow() && loadCompleted && user.hasEnabledDynamicEvent()) {
             dynamicService.followUp(new Up(user));
+        }
+
+        if (!properties.getLive().isEnableConnectLiveRoom()) {
+            return;
         }
 
         if (properties.getLive().isOnlyConnectNecessaryRooms()) {
@@ -126,7 +138,7 @@ public class BilibiliDataSourceEventListener implements ApplicationListener<Star
     /**
      * 数据源加载完毕事件
      */
-    public void onStarBotDataSourceLoadCompleteEvent() {
+    private void onStarBotDataSourceLoadCompleteEvent() {
         loadCompleted = true;
     }
 

@@ -92,7 +92,7 @@ public class BilibiliDynamicService implements ApplicationListener<StarBotDataSo
     private void startDynamicPush() {
         int interval = properties.getDynamic().getApiRequestInterval();
         if (interval < 10) {
-            log.warn("检测到动态推送抓取频率设置过小, 可能会造成动态抓取 API 访问被暂时封禁, 推荐将其设置为 10 以上的数值");
+            log.warn("动态推送抓取频率设置过小, 可能会造成动态抓取 API 访问被暂时封禁, 推荐将其设置为 10 以上的数值");
         }
 
         dynamicIds.addAll(bilibili.getDynamicUpdateList().stream().map(Dynamic::getId).collect(Collectors.toSet()));

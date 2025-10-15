@@ -32,6 +32,11 @@ public class BilibiliLiveRoomConnectTaskService implements ApplicationListener<S
 
     @Override
     public void onApplicationEvent(@NonNull StarBotDataSourceLoadCompleteEvent event) {
+        if (!properties.getLive().isEnableConnectLiveRoom()) {
+            log.warn("未启用直播间连接, 将不会连接到直播间, 数据抓取等服务不可用");
+            return;
+        }
+
         executor.submit(() -> {
             Thread.currentThread().setName("bilibili-queue");
             while (!Thread.currentThread().isInterrupted()) {

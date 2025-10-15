@@ -55,7 +55,7 @@ public class BilibiliLiveDataListener implements ApplicationListener<StarBotBase
      * 数据源推送用户添加事件
      * @param event 事件
      */
-    public void onStarBotDataSourceAddEvent(@NonNull StarBotDataSourceAddEvent event) {
+    private void onStarBotDataSourceAddEvent(@NonNull StarBotDataSourceAddEvent event) {
         PushUser user = event.getUser();
 
         if (!LivePlatform.BILIBILI.getName().equals(user.getPlatform())) {
@@ -72,7 +72,7 @@ public class BilibiliLiveDataListener implements ApplicationListener<StarBotBase
      * 数据源推送用户更新事件
      * @param event 事件
      */
-    public void onStarBotDataSourceUpdateEvent(@NonNull StarBotDataSourceUpdateEvent event) {
+    private void onStarBotDataSourceUpdateEvent(@NonNull StarBotDataSourceUpdateEvent event) {
         PushUser oldUser = event.getOldUser();
         PushUser user = event.getUser();
 
@@ -94,7 +94,7 @@ public class BilibiliLiveDataListener implements ApplicationListener<StarBotBase
      * 数据源加载完毕事件
      * @param event 事件
      */
-    public void onStarBotDataSourceLoadCompleteEvent(@NonNull StarBotDataSourceLoadCompleteEvent event) {
+    private void onStarBotDataSourceLoadCompleteEvent(@NonNull StarBotDataSourceLoadCompleteEvent event) {
         loadCompleted = true;
 
         Set<Long> uids = event.getUsers().stream()
