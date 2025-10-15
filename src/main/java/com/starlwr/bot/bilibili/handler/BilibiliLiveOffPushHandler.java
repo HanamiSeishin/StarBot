@@ -31,6 +31,7 @@ import java.util.Optional;
  *     <li>{hours}: 直播小时数</li>
  *     <li>{minutes}: 直播分钟数</li>
  *     <li>{seconds}: 直播秒数</li>
+ *     <li>{time}: 直播时长，格式为：11 时 45 分 14 秒，自动省略值为 0 的部分</li>
  * </ul>
  * <h4>默认参数:</h4>
  * <pre>
@@ -58,6 +59,7 @@ public class BilibiliLiveOffPushHandler implements StarBotEventHandler {
         long hours = 0;
         long minutes = 0;
         long seconds = 0;
+        String time = "";
         Optional<Long> optionalLiveStartTime = liveDataService.getLiveStartTime(event.getPlatform(), event.getSource().getUid());
         Optional<Long> optionalLiveEndTime = liveDataService.getLiveEndTime(event.getPlatform(), event.getSource().getUid());
         if (optionalLiveStartTime.isPresent() && optionalLiveEndTime.isPresent()) {
@@ -65,13 +67,24 @@ public class BilibiliLiveOffPushHandler implements StarBotEventHandler {
             hours = duration / 3600;
             minutes = (duration % 3600) / 60;
             seconds = duration % 60;
+            if (hours > 0) {
+                time += hours + " 时 ";
+            }
+            if (minutes > 0) {
+                time += minutes + " 分 ";
+            }
+            if (seconds > 0) {
+                time += seconds + " 秒";
+            }
+            time = time.trim();
         }
 
         String raw = params.getString("message");
         String content = raw.replace("{uname}", event.getSource().getUname())
                 .replace("{hours}", String.valueOf(hours))
                 .replace("{minutes}", String.valueOf(minutes))
-                .replace("{seconds}", String.valueOf(seconds));
+                .replace("{seconds}", String.valueOf(seconds))
+                .replace("{time}", time);
 
         PushTarget target = pushMessage.getTarget();
         List<Message> messages = Message.create(target.getPlatform(), target.getType(), target.getNum(), content);
