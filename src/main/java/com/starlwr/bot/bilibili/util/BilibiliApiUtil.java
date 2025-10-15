@@ -553,7 +553,7 @@ public class BilibiliApiUtil {
                 Long roomId = roomInfo.getLong("room_id");
                 String face = roomInfo.getString("face");
                 Integer liveStatus = roomInfo.getInteger("live_status");
-                Long liveStartTime = roomInfo.getLong("live_time");
+                Long liveStartTime = roomInfo.getLong("live_time") * 1000;
                 String title = roomInfo.getString("title");
                 String cover = roomInfo.getString("cover_from_user");
 
@@ -586,7 +586,7 @@ public class BilibiliApiUtil {
         if (liveStatus == 1) {
             liveStartTime = LocalDateTime.parse(result.getString("live_time"), formatter)
                     .atZone(ZoneId.systemDefault())
-                    .toEpochSecond();
+                    .toInstant().toEpochMilli();
         }
 
         String title = result.getString("title");
