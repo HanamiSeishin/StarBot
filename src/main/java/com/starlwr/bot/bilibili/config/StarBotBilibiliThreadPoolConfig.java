@@ -36,6 +36,9 @@ public class StarBotBilibiliThreadPoolConfig {
     private static class BilibiliWithLogCallerRunsPolicy implements RejectedExecutionHandler {
         @Override
         public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+            if (executor.isShutdown()) {
+                return;
+            }
             log.warn("Bilibili 线程池资源已耗尽, 请考虑增加线程池大小!");
             r.run();
         }
