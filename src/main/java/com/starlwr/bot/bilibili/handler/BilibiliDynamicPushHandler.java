@@ -4,8 +4,7 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.starlwr.bot.bilibili.config.StarBotBilibiliProperties;
 import com.starlwr.bot.bilibili.event.dynamic.BilibiliDynamicUpdateEvent;
-import com.starlwr.bot.bilibili.factory.BilibiliDynamicPainterFactory;
-import com.starlwr.bot.bilibili.painter.BilibiliDynamicPainter;
+import com.starlwr.bot.bilibili.service.BilibiliDynamicService;
 import com.starlwr.bot.core.event.StarBotExternalBaseEvent;
 import com.starlwr.bot.core.handler.DefaultHandlerForEvent;
 import com.starlwr.bot.core.handler.StarBotEventHandler;
@@ -18,10 +17,6 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -63,10 +58,10 @@ public class BilibiliDynamicPushHandler implements StarBotEventHandler {
     private StarBotBilibiliProperties properties;
 
     @Resource
-    private BilibiliDynamicPainterFactory factory;
+    private StarBotPushMessageSender sender;
 
     @Resource
-    private StarBotPushMessageSender sender;
+    private BilibiliDynamicService service;
 
     @Override
     public void handle(StarBotExternalBaseEvent baseEvent, PushMessage pushMessage) {
@@ -107,21 +102,7 @@ public class BilibiliDynamicPushHandler implements StarBotEventHandler {
             }
         }
 
-        BilibiliDynamicPainter painter = factory.create(event.getDynamic());
-
-        Optional<String> optionalBase64;
-        if (properties.getDynamic().isAutoSaveImage()) {
-            Path path = Paths.get("DynamicImage", event.getDynamic().getId() + ".png");
-            try {
-                Files.createDirectories(path.getParent());
-            } catch (IOException e) {
-                log.error("创建动态图片保存目录失败: {}", path.getParent(), e);
-            }
-            String savePath = path.toString();
-            optionalBase64 = painter.paint(savePath);
-        } else {
-            optionalBase64 = painter.paint();
-        }
+        Optional<String> optionalBase64 = service.paint(event.getDynamic());
 
         if (optionalBase64.isPresent()) {
             String base64 = optionalBase64.get();
