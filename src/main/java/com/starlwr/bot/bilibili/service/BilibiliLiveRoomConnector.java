@@ -44,10 +44,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 
 /**
  * Bilibili 直播间连接器
@@ -150,7 +147,7 @@ public class BilibiliLiveRoomConnector {
             status = ConnectStatus.CONNECTING;
             received = false;
 
-            Throwable exception = null;
+            CompletableFuture<WebSocketSession> sessionFuture = null;
             try {
                 String url = getConnectUrl();
 
@@ -160,30 +157,31 @@ public class BilibiliLiveRoomConnector {
                 WebSocketContainer container = ContainerProvider.getWebSocketContainer();
                 container.setDefaultMaxBinaryMessageBufferSize(2 * 1024 * 1024);
                 StandardWebSocketClient webSocketClient = new StandardWebSocketClient(container);
-                BilibiliWebSocketHandler handler = new BilibiliWebSocketHandler(this, interval);
-                CompletableFuture<WebSocketSession> sessionFuture = webSocketClient.execute(handler, headers, URI.create(url));
+                BilibiliWebSocketHandler handler = new BilibiliWebSocketHandler(this);
+                sessionFuture = webSocketClient.execute(handler, headers, URI.create(url));
 
-                sessionFuture.get(3, TimeUnit.SECONDS);
+                if (handler.awaitConnection()) {
+                    sessionFuture.get();
 
-                lastHeartBeatResponseTime = Instant.now();
-                startHeartBeat();
+                    lastHeartBeatResponseTime = Instant.now();
+                    startHeartBeat();
 
-                startDetectRisk();
-            } catch (Exception e) {
-                exception = e;
-            }
-
-            if (exception != null) {
-                status = ConnectStatus.ERROR;
-                if (exception instanceof TimeoutException) {
-                    log.warn("与 {} 的直播间 {} 连接超时, 将在 {} 秒后重新连接", up.getUname(), up.getRoomId(), interval / 1000);
+                    startDetectRisk();
                 } else {
-                    log.warn("与 {} 的直播间 {} 连接异常, 将在 {} 秒后重新连接", up.getUname(), up.getRoomId(), interval / 1000, exception);
+                    throw new TimeoutException();
+                }
+            } catch (Exception e) {
+                status = ConnectStatus.ERROR;
+                if (e instanceof TimeoutException) {
+                    log.warn("与 {} 的直播间 {} 连接超时, 将在 {} 秒后重新连接", up.getUname(), up.getRoomId(), interval / 1000);
+                    sessionFuture.cancel(true);
+                } else {
+                    log.warn("与 {} 的直播间 {} 连接异常, 将在 {} 秒后重新连接", up.getUname(), up.getRoomId(), interval / 1000, e);
                 }
 
                 try {
                     Thread.sleep(interval);
-                } catch (InterruptedException e) {
+                } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
                 }
 
@@ -468,11 +466,34 @@ public class BilibiliLiveRoomConnector {
 
         private final int interval;
 
-        private BilibiliWebSocketHandler(BilibiliLiveRoomConnector connector, int interval) {
+        private final CountDownLatch latch = new CountDownLatch(1);
+
+        private boolean connectTimeout = false;
+
+        private BilibiliWebSocketHandler(BilibiliLiveRoomConnector connector) {
             this.connector = connector;
             this.executor = connector.executor;
             this.up = connector.up;
-            this.interval = interval;
+            this.interval = connector.properties.getLive().getLiveRoomReconnectInterval();
+        }
+
+        /**
+         * 等待 WebSocket 连接成功
+         * @return 连接是否成功
+         */
+        public boolean awaitConnection() {
+            synchronized (this) {
+                try {
+                    if (latch.await(3, TimeUnit.SECONDS)) {
+                        return true;
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+
+                connectTimeout = true;
+                return false;
+            }
         }
 
         /**
@@ -481,6 +502,19 @@ public class BilibiliLiveRoomConnector {
          */
         @Override
         public void afterConnectionEstablished(@NonNull WebSocketSession session) {
+            latch.countDown();
+
+            synchronized (this) {
+                if (connectTimeout) {
+                    try {
+                        session.close();
+                    } catch (Exception e) {
+                        log.error("断开 {} 的直播间 {} 的超时 Websocket 连接异常", up.getUname(), up.getRoomId(), e);
+                    }
+                    return;
+                }
+            }
+
             executor.submit(() -> {
                 log.info("与 {} 的直播间 {} 的 Websocket 连接成功, 开始发送认证数据", up.getUname(), up.getRoomId());
                 connector.session = session;
@@ -602,6 +636,10 @@ public class BilibiliLiveRoomConnector {
          */
         @Override
         public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus closeStatus) {
+            if (connectTimeout) {
+                return;
+            }
+
             executor.execute(() -> {
                 if (connector.status == ConnectStatus.CLOSING) {
                     connector.status = ConnectStatus.CLOSED;
