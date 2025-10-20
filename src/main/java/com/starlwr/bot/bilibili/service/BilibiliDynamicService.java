@@ -105,7 +105,16 @@ public class BilibiliDynamicService implements ApplicationListener<StarBotDataSo
             log.warn("动态推送抓取频率设置过小, 可能会造成动态抓取 API 访问被暂时封禁, 推荐将其设置为 10 以上的数值");
         }
 
-        dynamicIds.addAll(bilibili.getDynamicUpdateList().stream().map(Dynamic::getId).collect(Collectors.toSet()));
+        try {
+            dynamicIds.addAll(bilibili.getDynamicUpdateList().stream().map(Dynamic::getId).collect(Collectors.toSet()));
+        } catch (Exception e) {
+            int pushMinutes = properties.getDynamic().getPushMinutes();
+            if (pushMinutes == 0) {
+                log.error("初始化动态列表异常, 可能造成近期动态被重复推送, 请注意", e);
+            } else {
+                log.error("初始化动态列表异常, 可能造成 {} 分钟内的动态被重复推送, 请注意", pushMinutes, e);
+            }
+        }
 
         scheduler.scheduleWithFixedDelay(() -> {
             Thread.currentThread().setName("dynamic-watcher");
