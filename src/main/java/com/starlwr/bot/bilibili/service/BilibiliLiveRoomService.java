@@ -3,9 +3,13 @@ package com.starlwr.bot.bilibili.service;
 import com.starlwr.bot.bilibili.factory.BilibiliLiveRoomConnectorFactory;
 import com.starlwr.bot.bilibili.model.Up;
 import com.starlwr.bot.bilibili.util.BilibiliApiUtil;
+import com.starlwr.bot.core.event.datasource.change.StarBotDataSourceUpdateEvent;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import jakarta.annotation.Resource;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationListener;
+import org.springframework.core.annotation.Order;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -14,8 +18,9 @@ import java.util.Map;
  * Bilibili 直播间服务
  */
 @Slf4j
+@Order(0)
 @StarBotComponent
-public class BilibiliLiveRoomService {
+public class BilibiliLiveRoomService implements ApplicationListener<StarBotDataSourceUpdateEvent> {
     @Resource
     private BilibiliApiUtil bilibili;
 
@@ -30,6 +35,20 @@ public class BilibiliLiveRoomService {
     private final Map<Long, Long> roomIdMap = new HashMap<>();
 
     private final Map<Long, BilibiliLiveRoomConnector> connectors = new HashMap<>();
+
+    @Override
+    public void onApplicationEvent(@NonNull StarBotDataSourceUpdateEvent event) {
+        Up up = ups.get(event.getUser().getUid());
+        if (up != null) {
+            up.setUname(event.getUser().getUname());
+            up.setFace(event.getUser().getFace());
+        }
+    }
+
+    @Override
+    public boolean supportsAsyncExecution() {
+        return false;
+    }
 
     /**
      * 是否存在指定 UID 的 UP 主

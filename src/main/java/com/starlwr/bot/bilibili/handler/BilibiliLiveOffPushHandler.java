@@ -2,6 +2,8 @@ package com.starlwr.bot.bilibili.handler;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.starlwr.bot.bilibili.event.live.BilibiliLiveOffEvent;
+import com.starlwr.bot.bilibili.model.Up;
+import com.starlwr.bot.bilibili.util.BilibiliApiUtil;
 import com.starlwr.bot.core.event.StarBotExternalBaseEvent;
 import com.starlwr.bot.core.handler.DefaultHandlerForEvent;
 import com.starlwr.bot.core.handler.StarBotEventHandler;
@@ -45,6 +47,9 @@ import java.util.Optional;
 @DefaultHandlerForEvent(event = "com.starlwr.bot.bilibili.event.live.BilibiliLiveOffEvent")
 public class BilibiliLiveOffPushHandler implements StarBotEventHandler {
     @Resource
+    private BilibiliApiUtil bilibili;
+
+    @Resource
     private StarBotPushMessageSender sender;
 
     @Resource
@@ -55,6 +60,14 @@ public class BilibiliLiveOffPushHandler implements StarBotEventHandler {
         BilibiliLiveOffEvent event = (BilibiliLiveOffEvent) baseEvent;
 
         JSONObject params = pushMessage.getParamsJsonObject();
+
+        String uname = event.getSource().getUname();
+        try {
+            Up up = bilibili.getUpInfoByUid(event.getSource().getUid());
+            uname = up.getUname();
+        } catch (Exception e) {
+            log.error("获取 Bilibili 用户昵称失败, UID: {}, 昵称: {}, 房间号: {}", event.getSource().getUid(), event.getSource().getUname(), event.getSource().getRoomIdString(), e);
+        }
 
         long hours = 0;
         long minutes = 0;
@@ -80,7 +93,7 @@ public class BilibiliLiveOffPushHandler implements StarBotEventHandler {
         }
 
         String raw = params.getString("message");
-        String content = raw.replace("{uname}", event.getSource().getUname())
+        String content = raw.replace("{uname}", uname)
                 .replace("{hours}", String.valueOf(hours))
                 .replace("{minutes}", String.valueOf(minutes))
                 .replace("{seconds}", String.valueOf(seconds))

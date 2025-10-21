@@ -3,6 +3,7 @@ package com.starlwr.bot.bilibili.handler;
 import com.alibaba.fastjson2.JSONObject;
 import com.starlwr.bot.bilibili.event.live.BilibiliLiveOnEvent;
 import com.starlwr.bot.bilibili.model.Room;
+import com.starlwr.bot.bilibili.model.Up;
 import com.starlwr.bot.bilibili.util.BilibiliApiUtil;
 import com.starlwr.bot.core.event.StarBotExternalBaseEvent;
 import com.starlwr.bot.core.handler.DefaultHandlerForEvent;
@@ -53,6 +54,14 @@ public class BilibiliLiveOnPushHandler implements StarBotEventHandler {
     public void handle(StarBotExternalBaseEvent baseEvent, PushMessage pushMessage) {
         BilibiliLiveOnEvent event = (BilibiliLiveOnEvent) baseEvent;
 
+        String uname = event.getSource().getUname();
+        try {
+            Up up = bilibili.getUpInfoByUid(event.getSource().getUid());
+            uname = up.getUname();
+        } catch (Exception e) {
+            log.error("获取 Bilibili 用户昵称失败, UID: {}, 昵称: {}, 房间号: {}", event.getSource().getUid(), event.getSource().getUname(), event.getSource().getRoomIdString(), e);
+        }
+
         String title = "";
         String cover = "";
         try {
@@ -60,13 +69,13 @@ public class BilibiliLiveOnPushHandler implements StarBotEventHandler {
             title = room.getTitle();
             cover = "{image_url=" + room.getCover() + "}";
         } catch (Exception e) {
-            log.error("获取 Bilibili 直播间信息失败, UID: {}, 昵称: {}, 房间号: {}", event.getSource().getUid(), event.getSource().getUname(), event.getSource().getRoomIdString(), e);
+            log.error("获取 Bilibili 直播间封面信息失败, UID: {}, 昵称: {}, 房间号: {}", event.getSource().getUid(), event.getSource().getUname(), event.getSource().getRoomIdString(), e);
         }
 
         JSONObject params = pushMessage.getParamsJsonObject();
 
         String raw = params.getString("message");
-        String content = raw.replace("{uname}", event.getSource().getUname())
+        String content = raw.replace("{uname}", uname)
                 .replace("{title}", title)
                 .replace("{url}", "https://live.bilibili.com/" + event.getSource().getRoomId())
                 .replace("{cover}", cover);
