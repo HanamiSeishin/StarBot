@@ -229,7 +229,7 @@ public class BilibiliDynamicService implements ApplicationListener<StarBotDataSo
             return;
         }
 
-        alreadyFollowUps.addAll(bilibili.getFollowingUps());
+        alreadyFollowUps.addAll(bilibili.getFollowingUps(accountService.getAccountInfo().getUid()));
         alreadyFollowUps.add(accountService.getAccountInfo());
 
         List<Up> notFollowUps = new ArrayList<>();

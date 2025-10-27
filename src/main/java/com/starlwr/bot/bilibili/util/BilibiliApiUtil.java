@@ -9,7 +9,6 @@ import com.starlwr.bot.bilibili.exception.NetworkException;
 import com.starlwr.bot.bilibili.exception.RequestFailedException;
 import com.starlwr.bot.bilibili.exception.ResponseCodeException;
 import com.starlwr.bot.bilibili.model.*;
-import com.starlwr.bot.bilibili.service.BilibiliAccountService;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.util.CollectionUtil;
 import com.starlwr.bot.core.util.HttpUtil;
@@ -53,13 +52,7 @@ public class BilibiliApiUtil {
     private StarBotBilibiliProperties properties;
 
     @Resource
-    private BilibiliApiUtil bilibili;
-
-    @Resource
     private HttpUtil http;
-
-    @Resource
-    private BilibiliAccountService accountService;
 
     private final RetryTemplate retryTemplate = new RetryTemplate();
 
@@ -247,7 +240,7 @@ public class BilibiliApiUtil {
         List<CompletableFuture<Optional<BufferedImage>>> downloadPictureTasks = new ArrayList<>();
 
         for (String url : urls) {
-            CompletableFuture<Optional<BufferedImage>> task = bilibili.asyncGetBilibiliImage(url, headers);
+            CompletableFuture<Optional<BufferedImage>> task = asyncGetBilibiliImage(url, headers);
             downloadPictureTasks.add(task);
         }
 
@@ -379,7 +372,7 @@ public class BilibiliApiUtil {
         String api = "https://api.live.bilibili.com/room/v1/Room/get_info?room_id=" + roomId;
         JSONObject result = requestBilibiliApi(api);
         Long uid = result.getLong("uid");
-        return bilibili.getUpInfoByUid(uid);
+        return getUpInfoByUid(uid);
     }
 
     /**
@@ -389,7 +382,7 @@ public class BilibiliApiUtil {
      */
     public Optional<String> getUnameByUid(@NonNull Long uid) {
         try {
-            return Optional.ofNullable(bilibili.getUpInfoByUid(uid).getUname());
+            return Optional.ofNullable(getUpInfoByUid(uid).getUname());
         } catch (Exception e) {
             log.error("获取昵称失败", e);
             return Optional.empty();
@@ -403,7 +396,7 @@ public class BilibiliApiUtil {
      */
     public Optional<Long> getRoomIdByUid(@NonNull Long uid) {
         try {
-            return Optional.ofNullable(bilibili.getUpInfoByUid(uid).getRoomId());
+            return Optional.ofNullable(getUpInfoByUid(uid).getRoomId());
         } catch (Exception e) {
             log.error("获取房间号失败", e);
             return Optional.empty();
@@ -417,7 +410,7 @@ public class BilibiliApiUtil {
      */
     public Optional<String> getFaceByUid(@NonNull Long uid) {
         try {
-            return Optional.ofNullable(bilibili.getUpInfoByUid(uid).getFace());
+            return Optional.ofNullable(getUpInfoByUid(uid).getFace());
         } catch (Exception e) {
             log.error("获取头像失败", e);
             return Optional.empty();
@@ -530,11 +523,11 @@ public class BilibiliApiUtil {
 
         if (uids.size() == 1) {
             Long uid = uids.iterator().next();
-            Optional<Long> optionalRoomId = bilibili.getRoomIdByUid(uid);
+            Optional<Long> optionalRoomId = getRoomIdByUid(uid);
             if (optionalRoomId.isPresent()) {
-                Room room = bilibili.getLiveInfoByRoomId(optionalRoomId.get());
-                room.setUname(bilibili.getUnameByUid(uid).orElseThrow());
-                room.setFace(bilibili.getFaceByUid(uid).orElseThrow());
+                Room room = getLiveInfoByRoomId(optionalRoomId.get());
+                room.setUname(getUnameByUid(uid).orElseThrow());
+                room.setFace(getFaceByUid(uid).orElseThrow());
                 rooms.put(uid, room);
             }
             return rooms;
@@ -613,15 +606,16 @@ public class BilibiliApiUtil {
 
     /**
      * 获取关注的 UP 主列表，该接口无房间号信息
+     * @param selfUid 自身 UID
      * @return 关注的 UP 主列表
      */
-    public List<Up> getFollowingUps() {
+    public List<Up> getFollowingUps(Long selfUid) {
         List<Up> ups = new ArrayList<>();
 
         int page = 1;
 
         while(true) {
-            String api = "https://api.bilibili.com/x/relation/followings?vmid=" + accountService.getAccountInfo().getUid() + "&pn=" + page + "&ps=50";
+            String api = "https://api.bilibili.com/x/relation/followings?vmid=" + selfUid + "&pn=" + page + "&ps=50";
             JSONObject result = requestBilibiliApi(api);
 
             JSONArray followings = result.getJSONArray("list");
