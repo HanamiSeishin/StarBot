@@ -6,7 +6,6 @@ import com.starlwr.bot.bilibili.event.live.BilibiliLiveOnEvent;
 import com.starlwr.bot.bilibili.model.Room;
 import com.starlwr.bot.bilibili.util.BilibiliApiUtil;
 import com.starlwr.bot.core.enums.LivePlatform;
-import com.starlwr.bot.core.event.datasource.StarBotBaseDataSourceEvent;
 import com.starlwr.bot.core.event.datasource.change.StarBotDataSourceAddEvent;
 import com.starlwr.bot.core.event.datasource.change.StarBotDataSourceRemoveEvent;
 import com.starlwr.bot.core.event.datasource.change.StarBotDataSourceUpdateEvent;
@@ -17,10 +16,9 @@ import com.starlwr.bot.core.model.PushUser;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.service.LiveDataService;
 import jakarta.annotation.Resource;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.ApplicationListener;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 
 import java.time.Instant;
@@ -34,9 +32,8 @@ import java.util.stream.Collectors;
  * Bilibili 备用直播推送服务
  */
 @Slf4j
-@Order(-10000)
 @StarBotComponent
-public class BilibiliBackupLivePushService implements ApplicationListener<StarBotBaseDataSourceEvent> {
+public class BilibiliBackupLivePushService {
     @Resource
     private ApplicationEventPublisher eventPublisher;
 
@@ -53,24 +50,13 @@ public class BilibiliBackupLivePushService implements ApplicationListener<StarBo
 
     private final Set<Long> uids = new HashSet<>();
 
-    @Override
-    public void onApplicationEvent(@NonNull StarBotBaseDataSourceEvent event) {
-        if (event instanceof StarBotDataSourceLoadCompleteEvent e) {
-            onStarBotDataSourceLoadCompleteEvent(e);
-        } else if (event instanceof StarBotDataSourceAddEvent e) {
-            onStarBotDataSourceAddEvent(e);
-        } else if (event instanceof StarBotDataSourceRemoveEvent e) {
-            onStarBotDataSourceRemoveEvent(e);
-        } else if (event instanceof StarBotDataSourceUpdateEvent e) {
-            onStarBotDataSourceUpdateEvent(e);
-        }
-    }
-
     /**
-     * 数据源加载完毕事件
+     * 启动备用直播推送
      * @param event 事件
      */
-    private void onStarBotDataSourceLoadCompleteEvent(StarBotDataSourceLoadCompleteEvent event) {
+    @Order(-10000)
+    @EventListener
+    public void onStarBotDataSourceLoadCompleteEvent(StarBotDataSourceLoadCompleteEvent event) {
         if (!properties.getLive().isBackupLivePush()) {
             return;
         }
@@ -123,10 +109,12 @@ public class BilibiliBackupLivePushService implements ApplicationListener<StarBo
     }
 
     /**
-     * 数据源推送用户添加事件
+     * 新增备用直播推送检测 UID
      * @param event 事件
      */
-    private void onStarBotDataSourceAddEvent(StarBotDataSourceAddEvent event) {
+    @Order(-10000)
+    @EventListener
+    public void onStarBotDataSourceAddEvent(StarBotDataSourceAddEvent event) {
         PushUser user = event.getUser();
 
         if (!LivePlatform.BILIBILI.getName().equals(user.getPlatform())) {
@@ -139,10 +127,12 @@ public class BilibiliBackupLivePushService implements ApplicationListener<StarBo
     }
 
     /**
-     * 数据源推送用户删除事件
+     * 移除备用直播推送检测 UID
      * @param event 事件
      */
-    private void onStarBotDataSourceRemoveEvent(StarBotDataSourceRemoveEvent event) {
+    @Order(-10000)
+    @EventListener
+    public void onStarBotDataSourceRemoveEvent(StarBotDataSourceRemoveEvent event) {
         PushUser user = event.getUser();
 
         if (!LivePlatform.BILIBILI.getName().equals(user.getPlatform())) {
@@ -155,10 +145,12 @@ public class BilibiliBackupLivePushService implements ApplicationListener<StarBo
     }
 
     /**
-     * 数据源推送用户更新事件
+     * 新增或移除备用直播推送检测 UID
      * @param event 事件
      */
-    private void onStarBotDataSourceUpdateEvent(StarBotDataSourceUpdateEvent event) {
+    @Order(-10000)
+    @EventListener
+    public void onStarBotDataSourceUpdateEvent(StarBotDataSourceUpdateEvent event) {
         PushUser oldUser = event.getOldUser();
         PushUser user = event.getUser();
 
@@ -171,11 +163,6 @@ public class BilibiliBackupLivePushService implements ApplicationListener<StarBo
         } else if (hasLivePushEvent(oldUser) && !hasLivePushEvent(user)) {
             uids.remove(user.getUid());
         }
-    }
-
-    @Override
-    public boolean supportsAsyncExecution() {
-        return false;
     }
 
     /**

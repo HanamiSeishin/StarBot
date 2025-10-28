@@ -5,7 +5,6 @@ import com.starlwr.bot.bilibili.model.Up;
 import com.starlwr.bot.bilibili.service.BilibiliDynamicService;
 import com.starlwr.bot.bilibili.service.BilibiliLiveRoomService;
 import com.starlwr.bot.core.enums.LivePlatform;
-import com.starlwr.bot.core.event.datasource.StarBotBaseDataSourceEvent;
 import com.starlwr.bot.core.event.datasource.change.StarBotDataSourceAddEvent;
 import com.starlwr.bot.core.event.datasource.change.StarBotDataSourceRemoveEvent;
 import com.starlwr.bot.core.event.datasource.change.StarBotDataSourceUpdateEvent;
@@ -13,18 +12,16 @@ import com.starlwr.bot.core.event.datasource.other.StarBotDataSourceLoadComplete
 import com.starlwr.bot.core.model.PushUser;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import jakarta.annotation.Resource;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationListener;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 
 /**
  * Bilibili 数据源事件监听器
  */
 @Slf4j
-@Order(-10000)
 @StarBotComponent
-public class BilibiliDataSourceEventListener implements ApplicationListener<StarBotBaseDataSourceEvent> {
+public class BilibiliDataSourceEventListener {
     @Resource
     private StarBotBilibiliProperties properties;
 
@@ -36,24 +33,13 @@ public class BilibiliDataSourceEventListener implements ApplicationListener<Star
 
     private boolean loadCompleted = false;
 
-    @Override
-    public void onApplicationEvent(@NonNull StarBotBaseDataSourceEvent event) {
-        if (event instanceof StarBotDataSourceAddEvent e) {
-            onStarBotDataSourceAddEvent(e);
-        } else if (event instanceof StarBotDataSourceRemoveEvent e) {
-            onStarBotDataSourceRemoveEvent(e);
-        } else if (event instanceof StarBotDataSourceUpdateEvent e) {
-            onStarBotDataSourceUpdateEvent(e);
-        } else if (event instanceof StarBotDataSourceLoadCompleteEvent) {
-            onStarBotDataSourceLoadCompleteEvent();
-        }
-    }
-
     /**
-     * 数据源推送用户添加事件
+     * B 站关注与连接直播间
      * @param event 事件
      */
-    private void onStarBotDataSourceAddEvent(StarBotDataSourceAddEvent event) {
+    @Order(-10000)
+    @EventListener
+    public void onStarBotDataSourceAddEvent(StarBotDataSourceAddEvent event) {
         PushUser user = event.getUser();
 
         if (!LivePlatform.BILIBILI.getName().equals(user.getPlatform())) {
@@ -77,10 +63,12 @@ public class BilibiliDataSourceEventListener implements ApplicationListener<Star
     }
 
     /**
-     * 数据源推送用户移除事件
+     * B 站断开连接直播间
      * @param event 事件
      */
-    private void onStarBotDataSourceRemoveEvent(StarBotDataSourceRemoveEvent event) {
+    @Order(-10000)
+    @EventListener
+    public void onStarBotDataSourceRemoveEvent(StarBotDataSourceRemoveEvent event) {
         PushUser user = event.getUser();
 
         if (!LivePlatform.BILIBILI.getName().equals(user.getPlatform())) {
@@ -100,10 +88,12 @@ public class BilibiliDataSourceEventListener implements ApplicationListener<Star
     }
 
     /**
-     * 数据源推送用户移除事件
+     * B 站关注与连接或断开直播间
      * @param event 事件
      */
-    private void onStarBotDataSourceUpdateEvent(StarBotDataSourceUpdateEvent event) {
+    @Order(-10000)
+    @EventListener
+    public void onStarBotDataSourceUpdateEvent(StarBotDataSourceUpdateEvent event) {
         PushUser oldUser = event.getOldUser();
         PushUser user = event.getUser();
 
@@ -136,14 +126,11 @@ public class BilibiliDataSourceEventListener implements ApplicationListener<Star
     }
 
     /**
-     * 数据源加载完毕事件
+     * 标记数据源加载完毕
      */
-    private void onStarBotDataSourceLoadCompleteEvent() {
+    @Order(-10000)
+    @EventListener(StarBotDataSourceLoadCompleteEvent.class)
+    public void onStarBotDataSourceLoadCompleteEvent() {
         loadCompleted = true;
-    }
-
-    @Override
-    public boolean supportsAsyncExecution() {
-        return ApplicationListener.super.supportsAsyncExecution();
     }
 }

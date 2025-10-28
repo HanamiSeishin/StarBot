@@ -11,13 +11,12 @@ import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.util.QrCodeUtil;
 import jakarta.annotation.Resource;
 import lombok.Getter;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.boot.web.context.WebServerApplicationContext;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationListener;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.data.util.Pair;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -29,9 +28,8 @@ import java.nio.file.Path;
  * Bilibili 账号服务
  */
 @Slf4j
-@Order(-10000)
 @StarBotComponent
-public class BilibiliAccountService implements ApplicationListener<ApplicationReadyEvent> {
+public class BilibiliAccountService {
     @Resource
     private ApplicationContext context;
 
@@ -47,8 +45,12 @@ public class BilibiliAccountService implements ApplicationListener<ApplicationRe
     @Getter
     private String loginUrl = "";
 
-    @Override
-    public void onApplicationEvent(@NonNull ApplicationReadyEvent event) {
+    /**
+     * 登录 B 站账号
+     */
+    @Order(-10000)
+    @EventListener(ApplicationReadyEvent.class)
+    public void onApplicationReadyEvent() {
         login();
     }
 
@@ -158,10 +160,5 @@ public class BilibiliAccountService implements ApplicationListener<ApplicationRe
         log.info("开始更新 Bilibili Web Api 签名");
         WebSign sign = bilibili.generateBilibiliWebSign();
         log.info("Bilibili Web Api 签名获取成功, ticket: {}, imgKey: {}, subKey: {}", sign.getTicket(), sign.getImgKey(), sign.getSubKey());
-    }
-
-    @Override
-    public boolean supportsAsyncExecution() {
-        return false;
     }
 }

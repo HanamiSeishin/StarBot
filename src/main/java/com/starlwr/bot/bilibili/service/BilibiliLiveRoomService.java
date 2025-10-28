@@ -6,9 +6,8 @@ import com.starlwr.bot.bilibili.util.BilibiliApiUtil;
 import com.starlwr.bot.core.event.datasource.change.StarBotDataSourceUpdateEvent;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import jakarta.annotation.Resource;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationListener;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 
 import java.util.HashMap;
@@ -18,9 +17,8 @@ import java.util.Map;
  * Bilibili 直播间服务
  */
 @Slf4j
-@Order(0)
 @StarBotComponent
-public class BilibiliLiveRoomService implements ApplicationListener<StarBotDataSourceUpdateEvent> {
+public class BilibiliLiveRoomService {
     @Resource
     private BilibiliApiUtil bilibili;
 
@@ -36,18 +34,18 @@ public class BilibiliLiveRoomService implements ApplicationListener<StarBotDataS
 
     private final Map<Long, BilibiliLiveRoomConnector> connectors = new HashMap<>();
 
-    @Override
-    public void onApplicationEvent(@NonNull StarBotDataSourceUpdateEvent event) {
+    /**
+     * 更新主播昵称头像
+     * @param event 事件
+     */
+    @Order(0)
+    @EventListener
+    public void onApplicationEvent(StarBotDataSourceUpdateEvent event) {
         Up up = ups.get(event.getUser().getUid());
         if (up != null) {
             up.setUname(event.getUser().getUname());
             up.setFace(event.getUser().getFace());
         }
-    }
-
-    @Override
-    public boolean supportsAsyncExecution() {
-        return false;
     }
 
     /**
