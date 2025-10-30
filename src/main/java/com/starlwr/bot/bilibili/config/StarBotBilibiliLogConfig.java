@@ -10,12 +10,10 @@ import com.starlwr.bot.bilibili.log.BilibiliLiveLogFileAppender;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Configuration;
 
 /**
  * StarBotBilibili 日志配置类
  */
-@Configuration
 @StarBotComponent
 public class StarBotBilibiliLogConfig {
     @PostConstruct

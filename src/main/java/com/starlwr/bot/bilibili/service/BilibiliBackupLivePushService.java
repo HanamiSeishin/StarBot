@@ -15,8 +15,8 @@ import com.starlwr.bot.core.model.PushTarget;
 import com.starlwr.bot.core.model.PushUser;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.service.LiveDataService;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
@@ -34,21 +34,25 @@ import java.util.stream.Collectors;
 @Slf4j
 @StarBotComponent
 public class BilibiliBackupLivePushService {
-    @Resource
-    private ApplicationEventPublisher eventPublisher;
+    private final ApplicationEventPublisher eventPublisher;
 
-    @Resource
-    private StarBotBilibiliProperties properties;
+    private final StarBotBilibiliProperties properties;
 
-    @Resource
-    private BilibiliApiUtil bilibili;
+    private final BilibiliApiUtil bilibili;
 
-    @Resource
-    private LiveDataService liveDataService;
+    private final LiveDataService liveDataService;
 
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     private final Set<Long> uids = new HashSet<>();
+
+    @Autowired
+    public BilibiliBackupLivePushService(ApplicationEventPublisher eventPublisher, StarBotBilibiliProperties properties, BilibiliApiUtil bilibili, LiveDataService liveDataService) {
+        this.eventPublisher = eventPublisher;
+        this.properties = properties;
+        this.bilibili = bilibili;
+        this.liveDataService = liveDataService;
+    }
 
     /**
      * 启动备用直播推送

@@ -17,10 +17,10 @@ import com.starlwr.bot.core.model.PushUser;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.util.CollectionUtil;
 import com.starlwr.bot.core.util.FixedSizeSetQueue;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
@@ -43,23 +43,17 @@ import java.util.stream.Collectors;
 public class BilibiliDynamicService {
     private static final Logger dynamicLogger = LoggerFactory.getLogger("DynamicLogger");
 
-    @Resource
-    private ApplicationEventPublisher eventPublisher;
+    private final ApplicationEventPublisher eventPublisher;
 
-    @Resource
-    private StarBotBilibiliProperties properties;
+    private final StarBotBilibiliProperties properties;
 
-    @Resource
-    private AbstractDataSource dataSource;
+    private final AbstractDataSource dataSource;
 
-    @Resource
-    private BilibiliApiUtil bilibili;
+    private final BilibiliApiUtil bilibili;
 
-    @Resource
-    private BilibiliAccountService accountService;
+    private final BilibiliAccountService accountService;
 
-    @Resource
-    private BilibiliDynamicPainterFactory factory;
+    private final BilibiliDynamicPainterFactory factory;
 
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
@@ -71,12 +65,22 @@ public class BilibiliDynamicService {
 
     private final FixedSizeSetQueue<String> dynamicIds = new FixedSizeSetQueue<>(1000);
 
+    @Autowired
+    public BilibiliDynamicService(ApplicationEventPublisher eventPublisher, StarBotBilibiliProperties properties, AbstractDataSource dataSource, BilibiliApiUtil bilibili, BilibiliAccountService accountService, BilibiliDynamicPainterFactory factory) {
+        this.eventPublisher = eventPublisher;
+        this.properties = properties;
+        this.dataSource = dataSource;
+        this.bilibili = bilibili;
+        this.accountService = accountService;
+        this.factory = factory;
+    }
+
     /**
      * 启动 B 站自动关注与动态推送线程
      */
     @Order(-30000)
     @EventListener(StarBotDataSourceLoadCompleteEvent.class)
-    public void onApplicationEvent() {
+    public void onStarBotDataSourceLoadCompleteEvent() {
         startDynamicPush();
         autoFollowUps();
     }

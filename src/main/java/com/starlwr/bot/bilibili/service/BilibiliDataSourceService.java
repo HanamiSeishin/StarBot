@@ -7,8 +7,8 @@ import com.starlwr.bot.core.model.PushUser;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.service.DataSourceService;
 import com.starlwr.bot.core.service.DataSourceServiceConfig;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 import java.util.Map;
@@ -21,8 +21,12 @@ import java.util.stream.Collectors;
 @StarBotComponent
 @DataSourceServiceConfig(name = "bilibili")
 public class BilibiliDataSourceService implements DataSourceService {
-    @Resource
-    private BilibiliApiUtil bilibili;
+    private final BilibiliApiUtil bilibili;
+
+    @Autowired
+    public BilibiliDataSourceService(BilibiliApiUtil bilibili) {
+        this.bilibili = bilibili;
+    }
 
     /**
      * 补全推送用户信息

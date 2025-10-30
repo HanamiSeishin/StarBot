@@ -10,9 +10,8 @@ import com.starlwr.bot.core.event.datasource.other.StarBotDataSourceLoadComplete
 import com.starlwr.bot.core.model.PushUser;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.service.LiveDataService;
-import jakarta.annotation.Resource;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 
@@ -27,16 +26,20 @@ import java.util.stream.Collectors;
 @Slf4j
 @StarBotComponent
 public class BilibiliLiveDataListener {
-    @Resource
-    private StarBotBilibiliProperties properties;
+    private final StarBotBilibiliProperties properties;
 
-    @Resource
-    private BilibiliApiUtil bilibili;
+    private final BilibiliApiUtil bilibili;
 
-    @Resource
-    private LiveDataService liveDataService;
+    private final LiveDataService liveDataService;
 
     private boolean loadCompleted = false;
+
+    @Autowired
+    public BilibiliLiveDataListener(StarBotBilibiliProperties properties, BilibiliApiUtil bilibili, LiveDataService liveDataService) {
+        this.properties = properties;
+        this.bilibili = bilibili;
+        this.liveDataService = liveDataService;
+    }
 
     /**
      * 获取更新房间数据

@@ -13,10 +13,8 @@ import com.starlwr.bot.bilibili.model.Up;
 import com.starlwr.bot.bilibili.util.BilibiliApiUtil;
 import com.starlwr.bot.core.enums.LivePlatform;
 import com.starlwr.bot.core.event.live.StarBotBaseLiveEvent;
-import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.service.LiveDataService;
 import com.starlwr.bot.core.util.FixedSizeSetQueue;
-import jakarta.annotation.Resource;
 import jakarta.websocket.ClientEndpoint;
 import jakarta.websocket.ContainerProvider;
 import jakarta.websocket.WebSocketContainer;
@@ -24,10 +22,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.brotli.dec.BrotliInputStream;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.annotation.Scope;
 import org.springframework.data.util.Pair;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -51,36 +46,24 @@ import java.util.concurrent.*;
  */
 @Slf4j
 @ClientEndpoint
-@StarBotComponent
-@Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class BilibiliLiveRoomConnector {
-    @Resource
-    private ApplicationEventPublisher eventPublisher;
+    private final ThreadPoolTaskExecutor executor;
 
-    @Resource
-    private StarBotBilibiliProperties properties;
+    private final ApplicationEventPublisher eventPublisher;
 
-    @Resource
-    @Qualifier("bilibiliThreadPool")
-    private ThreadPoolTaskExecutor executor;
+    private final StarBotBilibiliProperties properties;
 
-    @Resource
-    private LiveDataService liveDataService;
+    private final LiveDataService liveDataService;
 
-    @Resource
-    private BilibiliAccountService accountService;
+    private final BilibiliAccountService accountService;
 
-    @Resource
-    private BilibiliLiveRoomConnectTaskService taskService;
+    private final BilibiliLiveRoomConnectTaskService taskService;
 
-    @Resource
-    private BilibiliEventParser eventParser;
+    private final BilibiliEventParser eventParser;
 
-    @Resource
-    private BilibiliApiUtil bilibili;
+    private final BilibiliApiUtil bilibili;
 
-    @Resource
-    private TaskScheduler taskScheduler;
+    private final TaskScheduler taskScheduler;
 
     @Getter
     private final Up up;
@@ -102,8 +85,19 @@ public class BilibiliLiveRoomConnector {
 
     private final FixedSizeSetQueue<Pair<Long, String>> latestDanmus = new FixedSizeSetQueue<>(30);
 
-    public BilibiliLiveRoomConnector(Up up) {
+    public BilibiliLiveRoomConnector(ThreadPoolTaskExecutor executor, ApplicationEventPublisher eventPublisher, StarBotBilibiliProperties properties, LiveDataService liveDataService, BilibiliAccountService accountService, BilibiliLiveRoomConnectTaskService taskService, BilibiliEventParser eventParser, BilibiliApiUtil bilibili, TaskScheduler taskScheduler, Up up) {
+        this.executor = executor;
+        this.eventPublisher = eventPublisher;
+        this.properties = properties;
+        this.liveDataService = liveDataService;
+        this.accountService = accountService;
+        this.taskService = taskService;
+        this.eventParser = eventParser;
+        this.bilibili = bilibili;
+        this.taskScheduler = taskScheduler;
+
         this.up = up;
+
         this.status = ConnectStatus.INIT;
     }
 

@@ -9,9 +9,9 @@ import com.starlwr.bot.bilibili.model.WebSign;
 import com.starlwr.bot.bilibili.util.BilibiliApiUtil;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.util.QrCodeUtil;
-import jakarta.annotation.Resource;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.boot.web.context.WebServerApplicationContext;
@@ -30,20 +30,24 @@ import java.nio.file.Path;
 @Slf4j
 @StarBotComponent
 public class BilibiliAccountService {
-    @Resource
-    private ApplicationContext context;
+    private final ApplicationContext context;
 
-    @Resource
-    private WebServerApplicationContext webContext;
+    private final WebServerApplicationContext webContext;
 
-    @Resource
-    private BilibiliApiUtil bilibili;
+    private final BilibiliApiUtil bilibili;
 
     @Getter
     private Up accountInfo;
 
     @Getter
     private String loginUrl = "";
+
+    @Autowired
+    public BilibiliAccountService(ApplicationContext context, WebServerApplicationContext webContext, BilibiliApiUtil bilibili) {
+        this.context = context;
+        this.webContext = webContext;
+        this.bilibili = bilibili;
+    }
 
     /**
      * 登录 B 站账号

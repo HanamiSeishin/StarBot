@@ -2,8 +2,7 @@ package com.starlwr.bot.bilibili.config;
 
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import jakarta.annotation.PostConstruct;
-import jakarta.annotation.Resource;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
@@ -11,11 +10,14 @@ import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 /**
  * StarBotBilibili Thymeleaf 配置类
  */
-@Configuration
 @StarBotComponent
 public class StarBotBilibiliThymeleafConfig {
-    @Resource
-    private SpringTemplateEngine templateEngine;
+    private final SpringTemplateEngine templateEngine;
+
+    @Autowired
+    public StarBotBilibiliThymeleafConfig(SpringTemplateEngine templateEngine) {
+        this.templateEngine = templateEngine;
+    }
 
     @PostConstruct
     public void registerPluginTemplateResolver() {

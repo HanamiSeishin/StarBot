@@ -15,11 +15,12 @@ import com.starlwr.bot.core.util.HttpUtil;
 import com.starlwr.bot.core.util.MathUtil;
 import com.starlwr.bot.core.util.StringUtil;
 import jakarta.annotation.PostConstruct;
-import jakarta.annotation.Resource;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.aop.framework.AopContext;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.util.Pair;
 import org.springframework.retry.backoff.FixedBackOffPolicy;
@@ -48,11 +49,9 @@ import java.util.stream.Collectors;
 @Slf4j
 @StarBotComponent
 public class BilibiliApiUtil {
-    @Resource
-    private StarBotBilibiliProperties properties;
+    private final StarBotBilibiliProperties properties;
 
-    @Resource
-    private HttpUtil http;
+    private final HttpUtil http;
 
     private final RetryTemplate retryTemplate = new RetryTemplate();
 
@@ -67,6 +66,12 @@ public class BilibiliApiUtil {
     private final Pattern biliJctPattern = Pattern.compile("bili_jct=(.*?)&");
 
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    @Autowired
+    public BilibiliApiUtil(StarBotBilibiliProperties properties, HttpUtil http) {
+        this.properties = properties;
+        this.http = http;
+    }
 
     @PostConstruct
     public void init() {
@@ -382,7 +387,7 @@ public class BilibiliApiUtil {
      */
     public Optional<String> getUnameByUid(@NonNull Long uid) {
         try {
-            return Optional.ofNullable(getUpInfoByUid(uid).getUname());
+            return Optional.ofNullable(((BilibiliApiUtil) AopContext.currentProxy()).getUpInfoByUid(uid).getUname());
         } catch (Exception e) {
             log.error("获取昵称失败", e);
             return Optional.empty();
@@ -396,7 +401,7 @@ public class BilibiliApiUtil {
      */
     public Optional<Long> getRoomIdByUid(@NonNull Long uid) {
         try {
-            return Optional.ofNullable(getUpInfoByUid(uid).getRoomId());
+            return Optional.ofNullable(((BilibiliApiUtil) AopContext.currentProxy()).getUpInfoByUid(uid).getRoomId());
         } catch (Exception e) {
             log.error("获取房间号失败", e);
             return Optional.empty();
@@ -410,7 +415,7 @@ public class BilibiliApiUtil {
      */
     public Optional<String> getFaceByUid(@NonNull Long uid) {
         try {
-            return Optional.ofNullable(getUpInfoByUid(uid).getFace());
+            return Optional.ofNullable(((BilibiliApiUtil) AopContext.currentProxy()).getUpInfoByUid(uid).getFace());
         } catch (Exception e) {
             log.error("获取头像失败", e);
             return Optional.empty();

@@ -11,8 +11,8 @@ import com.starlwr.bot.core.event.datasource.change.StarBotDataSourceUpdateEvent
 import com.starlwr.bot.core.event.datasource.other.StarBotDataSourceLoadCompleteEvent;
 import com.starlwr.bot.core.model.PushUser;
 import com.starlwr.bot.core.plugin.StarBotComponent;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 
@@ -22,16 +22,20 @@ import org.springframework.core.annotation.Order;
 @Slf4j
 @StarBotComponent
 public class BilibiliDataSourceEventListener {
-    @Resource
-    private StarBotBilibiliProperties properties;
+    private final StarBotBilibiliProperties properties;
 
-    @Resource
-    private BilibiliLiveRoomService liveRoomService;
+    private final BilibiliLiveRoomService liveRoomService;
 
-    @Resource
-    private BilibiliDynamicService dynamicService;
+    private final BilibiliDynamicService dynamicService;
 
     private boolean loadCompleted = false;
+
+    @Autowired
+    public BilibiliDataSourceEventListener(StarBotBilibiliProperties properties, BilibiliLiveRoomService liveRoomService, BilibiliDynamicService dynamicService) {
+        this.properties = properties;
+        this.liveRoomService = liveRoomService;
+        this.dynamicService = dynamicService;
+    }
 
     /**
      * B 站关注与连接直播间

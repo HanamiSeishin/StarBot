@@ -14,11 +14,11 @@ import com.starlwr.bot.core.model.LiveStreamerInfo;
 import com.starlwr.bot.core.model.UserInfo;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.util.MathUtil;
-import jakarta.annotation.Resource;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -35,14 +35,11 @@ import java.util.function.BiFunction;
 public class BilibiliEventParser {
     private static final Logger liveMessageLogger = LoggerFactory.getLogger("LiveMessageLogger");
 
-    @Resource
-    private StarBotBilibiliProperties properties;
+    private final StarBotBilibiliProperties properties;
 
-    @Resource
-    private BilibiliApiUtil bilibili;
+    private final BilibiliApiUtil bilibili;
 
-    @Resource
-    private BilibiliGiftService giftService;
+    private final BilibiliGiftService giftService;
 
     private final Map<String, BiFunction<JSONObject, LiveStreamerInfo, StarBotBaseLiveEvent>> parsers = Map.of(
             "LIVE", BilibiliEventParser.this::parseLiveOnData,
@@ -55,6 +52,13 @@ public class BilibiliEventParser {
             "LIKE_INFO_V3_CLICK", BilibiliEventParser.this::parseLikeData,
             "LIKE_INFO_V3_UPDATE", BilibiliEventParser.this::parseLikeUpdateData
     );
+
+    @Autowired
+    public BilibiliEventParser(StarBotBilibiliProperties properties, BilibiliApiUtil bilibili, BilibiliGiftService giftService) {
+        this.properties = properties;
+        this.bilibili = bilibili;
+        this.giftService = giftService;
+    }
 
     /**
      * 将直播间收到的原始消息转换为事件

@@ -4,8 +4,8 @@ import com.starlwr.bot.bilibili.service.BilibiliAccountService;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.util.QrCodeUtil;
 import com.starlwr.bot.core.util.StringUtil;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,8 +18,12 @@ import java.util.Optional;
 @StarBotComponent
 @RequestMapping("/bilibili/login")
 public class BilibiliLoginController {
-    @Resource
-    private BilibiliAccountService accountService;
+    private final BilibiliAccountService accountService;
+
+    @Autowired
+    public BilibiliLoginController(BilibiliAccountService accountService) {
+        this.accountService = accountService;
+    }
 
     @GetMapping("/qrcode")
     public String qrCodeLogin(Model model) {

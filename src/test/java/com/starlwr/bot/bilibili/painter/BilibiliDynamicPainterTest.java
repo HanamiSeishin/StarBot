@@ -5,8 +5,8 @@ import com.starlwr.bot.bilibili.config.TestBuildPropertiesConfig;
 import com.starlwr.bot.bilibili.config.TestContextConfig;
 import com.starlwr.bot.bilibili.factory.BilibiliDynamicPainterFactory;
 import com.starlwr.bot.bilibili.model.Dynamic;
-import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ContextConfiguration;
@@ -23,8 +23,12 @@ import java.util.stream.Collectors;
 @ContextConfiguration(classes = TestContextConfig.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class BilibiliDynamicPainterTest {
-    @Resource
-    private BilibiliDynamicPainterFactory factory;
+    private final BilibiliDynamicPainterFactory factory;
+
+    @Autowired
+    public BilibiliDynamicPainterTest(BilibiliDynamicPainterFactory factory) {
+        this.factory = factory;
+    }
 
     /**
      * 从日志文件中读取动态信息生成图片

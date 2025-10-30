@@ -5,8 +5,8 @@ import com.starlwr.bot.bilibili.model.ConnectTask;
 import com.starlwr.bot.bilibili.model.Up;
 import com.starlwr.bot.core.event.datasource.other.StarBotDataSourceLoadCompleteEvent;
 import com.starlwr.bot.core.plugin.StarBotComponent;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 
@@ -21,19 +21,23 @@ import java.util.concurrent.LinkedBlockingQueue;
 @Slf4j
 @StarBotComponent
 public class BilibiliLiveRoomConnectTaskService {
-    @Resource
-    private StarBotBilibiliProperties properties;
+    private final StarBotBilibiliProperties properties;
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     private final BlockingQueue<ConnectTask> taskQueue = new LinkedBlockingQueue<>();
+
+    @Autowired
+    public BilibiliLiveRoomConnectTaskService(StarBotBilibiliProperties properties) {
+        this.properties = properties;
+    }
 
     /**
      * 启动连接 B 站直播间线程
      */
     @Order(0)
     @EventListener(StarBotDataSourceLoadCompleteEvent.class)
-    public void onApplicationEvent() {
+    public void onStarBotDataSourceLoadCompleteEvent() {
         if (!properties.getLive().isEnableConnectLiveRoom()) {
             log.warn("未启用直播间连接, 将不会连接到直播间, 数据抓取等服务不可用");
             return;

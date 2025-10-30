@@ -9,17 +9,12 @@ import com.starlwr.bot.bilibili.util.BilibiliApiUtil;
 import com.starlwr.bot.core.factory.StarBotCommonPainterFactory;
 import com.starlwr.bot.core.model.TextWithStyle;
 import com.starlwr.bot.core.painter.CommonPainter;
-import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.util.CollectionUtil;
 import com.starlwr.bot.core.util.FontUtil;
 import com.starlwr.bot.core.util.ImageUtil;
 import com.starlwr.bot.core.util.StringUtil;
 import jakarta.annotation.Nullable;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.config.ConfigurableBeanFactory;
-import org.springframework.context.annotation.Scope;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.util.Pair;
@@ -40,24 +35,18 @@ import java.util.stream.Collectors;
  * Bilibili 动态绘图器
  */
 @Slf4j
-@StarBotComponent
-@Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class BilibiliDynamicPainter {
-    @Resource
-    private StarBotBilibiliProperties properties;
+    private final StarBotBilibiliProperties properties;
 
-    @Resource
-    private FontUtil fontUtil;
+    private final FontUtil fontUtil;
 
-    @Resource
-    private BilibiliApiUtil bilibili;
+    private final BilibiliApiUtil bilibili;
 
-    @Resource
-    private StarBotCommonPainterFactory factory;
+    private final StarBotCommonPainterFactory factory;
 
-    private ResourceLoader resourceLoader;
+    private final ResourceLoader resourceLoader;
 
-    private CommonPainter painter;
+    private final CommonPainter painter;
 
     private final Dynamic dynamic;
 
@@ -79,14 +68,17 @@ public class BilibiliDynamicPainter {
 
     private final Color COLOR_LIGHT_BLUE = new Color(0, 174, 236);
 
-    public BilibiliDynamicPainter(Dynamic dynamic) {
-        this.dynamic = dynamic;
-    }
+    public BilibiliDynamicPainter(StarBotBilibiliProperties properties, FontUtil fontUtil, BilibiliApiUtil bilibili, StarBotCommonPainterFactory factory, Dynamic dynamic) {
+        this.properties = properties;
+        this.fontUtil = fontUtil;
+        this.bilibili = bilibili;
+        this.factory = factory;
 
-    @PostConstruct
-    public void init() {
+        this.dynamic = dynamic;
+
         this.resourceLoader = new DefaultResourceLoader(getClass().getClassLoader());
         this.painter = factory.create(WIDTH, 5000, true);
+
         iconUrlMap.put("RICH_TEXT_NODE_TYPE_WEB", "classpath:images/dynamic/link.png");
         iconUrlMap.put("RICH_TEXT_NODE_TYPE_BV", "classpath:images/dynamic/video.png");
         iconUrlMap.put("RICH_TEXT_NODE_TYPE_OGV_SEASON", "classpath:images/dynamic/video.png");

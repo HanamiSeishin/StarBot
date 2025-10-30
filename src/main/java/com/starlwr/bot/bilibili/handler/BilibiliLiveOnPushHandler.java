@@ -13,8 +13,8 @@ import com.starlwr.bot.core.model.PushMessage;
 import com.starlwr.bot.core.model.PushTarget;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.sender.StarBotPushMessageSender;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 
@@ -44,11 +44,15 @@ import java.util.List;
 @StarBotComponent
 @DefaultHandlerForEvent(event = "com.starlwr.bot.bilibili.event.live.BilibiliLiveOnEvent")
 public class BilibiliLiveOnPushHandler implements StarBotEventHandler {
-    @Resource
-    private BilibiliApiUtil bilibili;
+    private final BilibiliApiUtil bilibili;
 
-    @Resource
-    private StarBotPushMessageSender sender;
+    private final StarBotPushMessageSender sender;
+
+    @Autowired
+    public BilibiliLiveOnPushHandler(BilibiliApiUtil bilibili, StarBotPushMessageSender sender) {
+        this.bilibili = bilibili;
+        this.sender = sender;
+    }
 
     @Override
     public void handle(StarBotExternalBaseEvent baseEvent, PushMessage pushMessage) {

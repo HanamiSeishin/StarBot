@@ -5,8 +5,8 @@ import com.starlwr.bot.bilibili.model.Up;
 import com.starlwr.bot.bilibili.util.BilibiliApiUtil;
 import com.starlwr.bot.core.event.datasource.change.StarBotDataSourceUpdateEvent;
 import com.starlwr.bot.core.plugin.StarBotComponent;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 
@@ -19,14 +19,11 @@ import java.util.Map;
 @Slf4j
 @StarBotComponent
 public class BilibiliLiveRoomService {
-    @Resource
-    private BilibiliApiUtil bilibili;
+    private final BilibiliApiUtil bilibili;
 
-    @Resource
-    private BilibiliLiveRoomConnectorFactory connectorFactory;
+    private final BilibiliLiveRoomConnectorFactory connectorFactory;
 
-    @Resource
-    private BilibiliLiveRoomConnectTaskService taskService;
+    private final BilibiliLiveRoomConnectTaskService taskService;
 
     private final Map<Long, Up> ups = new HashMap<>();
 
@@ -34,13 +31,20 @@ public class BilibiliLiveRoomService {
 
     private final Map<Long, BilibiliLiveRoomConnector> connectors = new HashMap<>();
 
+    @Autowired
+    public BilibiliLiveRoomService(BilibiliApiUtil bilibili, BilibiliLiveRoomConnectorFactory connectorFactory, BilibiliLiveRoomConnectTaskService taskService) {
+        this.bilibili = bilibili;
+        this.connectorFactory = connectorFactory;
+        this.taskService = taskService;
+    }
+
     /**
      * 更新主播昵称头像
      * @param event 事件
      */
     @Order(0)
     @EventListener
-    public void onApplicationEvent(StarBotDataSourceUpdateEvent event) {
+    public void onStarBotDataSourceUpdateEvent(StarBotDataSourceUpdateEvent event) {
         Up up = ups.get(event.getUser().getUid());
         if (up != null) {
             up.setUname(event.getUser().getUname());
