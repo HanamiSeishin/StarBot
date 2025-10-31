@@ -58,6 +58,20 @@ public class BilibiliLiveOnPushHandler implements StarBotEventHandler {
     public void handle(StarBotExternalBaseEvent baseEvent, PushMessage pushMessage) {
         BilibiliLiveOnEvent event = (BilibiliLiveOnEvent) baseEvent;
 
+        JSONObject params = pushMessage.getParamsJsonObject();
+        PushTarget target = pushMessage.getTarget();
+
+        if (event.isReconnect()) {
+            String content = params.getString("reconnect_message");
+            List<Message> messages = Message.create(target.getPlatform(), target.getType(), target.getNum(), content);
+
+            for (Message message : messages) {
+                sender.send(message);
+            }
+
+            return;
+        }
+
         String uname = event.getSource().getUname();
         try {
             Up up = bilibili.getUpInfoByUid(event.getSource().getUid());
@@ -76,15 +90,12 @@ public class BilibiliLiveOnPushHandler implements StarBotEventHandler {
             log.error("获取 Bilibili 直播间封面信息失败, UID: {}, 昵称: {}, 房间号: {}", event.getSource().getUid(), event.getSource().getUname(), event.getSource().getRoomIdString(), e);
         }
 
-        JSONObject params = pushMessage.getParamsJsonObject();
-
         String raw = params.getString("message");
         String content = raw.replace("{uname}", uname)
                 .replace("{title}", title)
                 .replace("{url}", "https://live.bilibili.com/" + event.getSource().getRoomId())
                 .replace("{cover}", cover);
 
-        PushTarget target = pushMessage.getTarget();
         List<Message> messages = Message.create(target.getPlatform(), target.getType(), target.getNum(), content);
 
         for (Message message : messages) {
@@ -97,6 +108,7 @@ public class BilibiliLiveOnPushHandler implements StarBotEventHandler {
         JSONObject params = new JSONObject();
 
         params.put("message", "{uname} 正在直播 {title}\n{url}{next}{cover}");
+        params.put("reconnect_message", "检测到下播后短时间内重新开播,本次开播不再重复通知");
 
         return params;
     }
