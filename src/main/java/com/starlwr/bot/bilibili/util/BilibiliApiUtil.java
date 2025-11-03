@@ -5,10 +5,12 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONWriter;
 import com.starlwr.bot.bilibili.config.StarBotBilibiliProperties;
+import com.starlwr.bot.bilibili.enums.DanmuType;
 import com.starlwr.bot.bilibili.exception.NetworkException;
 import com.starlwr.bot.bilibili.exception.RequestFailedException;
 import com.starlwr.bot.bilibili.exception.ResponseCodeException;
 import com.starlwr.bot.bilibili.model.*;
+import com.starlwr.bot.core.model.UserInfo;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.util.CollectionUtil;
 import com.starlwr.bot.core.util.HttpUtil;
@@ -34,6 +36,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -432,7 +435,6 @@ public class BilibiliApiUtil {
         params.put("id", roomId);
 
         String api = "https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo" + BilibiliWbiUtil.getWbiSign(params, sign.getImgKey(), sign.getSubKey());
-
         JSONObject result = requestBilibiliApi(api);
 
         String token = result.getString("token");
@@ -449,7 +451,7 @@ public class BilibiliApiUtil {
         String hbParam = Base64.getEncoder().encodeToString(("60|" + roomId + "|1|0").getBytes(StandardCharsets.UTF_8));
         http.asyncGet(api + hbParam, getBilibiliHeaders()).whenComplete((response, exception) -> {
             if (exception != null) {
-                log.error("直播间 {} 发送 Web 心跳包异常, 偶然出现此异常为网络波动引起的正常现象: {}", roomId, exception.getClass().getName());
+                log.error("直播间 {} 发送 Web 心跳包异常, 偶然出现此异常可忽略", roomId, exception);
             }
         });
     }
@@ -459,23 +461,104 @@ public class BilibiliApiUtil {
      * @param roomId 房间号
      * @return 最新弹幕列表
      */
-    public List<Pair<Long, String>> getLiveRoomLatestDanmus(@NonNull Long roomId) {
-        List<Pair<Long, String>> danmus = new ArrayList<>();
+    public List<Danmu> getLiveRoomLatestDanmus(@NonNull Long roomId) {
+        List<Danmu> danmus = new ArrayList<>();
 
-        try {
-            String api = "https://api.live.bilibili.com/xlive/web-room/v1/dM/gethistory?roomid=" + roomId;
-            JSONObject result = requestBilibiliApi(api);
+        String api = "https://api.live.bilibili.com/xlive/web-room/v1/dM/gethistory?roomid=" + roomId;
+        JSONObject result = requestBilibiliApi(api);
 
-            JSONArray messages = result.getJSONArray("room");
-            for (JSONObject message : messages.toList(JSONObject.class)) {
-                danmus.add(Pair.of(message.getLong("uid"), message.getString("text")));
+        JSONArray messages = result.getJSONArray("room");
+        for (JSONObject message : messages.toList(JSONObject.class)) {
+            try {
+                JSONObject userInfo = message.getJSONObject("user");
+                JSONObject baseInfo = userInfo.getJSONObject("base");
+
+                Long uid = userInfo.getLong("uid");
+                String uname = baseInfo.getString("name");
+                String face = baseInfo.getString("face");
+
+                JSONArray fansMedalInfo = message.getJSONArray("medal");
+                FansMedal fansMedal = null;
+                if (!fansMedalInfo.isEmpty()) {
+                    Long fansMedalUid = fansMedalInfo.getLong(12);
+                    String fansMedalUname = fansMedalInfo.getString(2);
+                    Long fansMedalRoomId = fansMedalInfo.getLong(3);
+                    String fansMedalName = fansMedalInfo.getString(1);
+                    Integer fansMedalLevel = fansMedalInfo.getInteger(0);
+                    Boolean fansMedalLighted = fansMedalInfo.getInteger(11) == 1;
+                    fansMedal = new FansMedal(fansMedalUid, fansMedalUname, fansMedalRoomId, fansMedalName, fansMedalLevel, fansMedalLighted);
+                }
+
+                JSONObject guardInfo = userInfo.getJSONObject("medal");
+                Guard guard = (guardInfo != null && guardInfo.getInteger("guard_level") != 0)
+                        ? new Guard(guardInfo.getInteger("guard_level"), guardInfo.getString("guard_icon"))
+                        : null;
+
+                Integer honorLevel = message.getInteger("wealth_level");
+
+                BilibiliUserInfo sender = new BilibiliUserInfo(uid, uname, face, fansMedal, guard, honorLevel);
+
+                UserInfo reply = null;
+                JSONObject replyInfo = message.getJSONObject("reply");
+                Long replyUid = replyInfo.getLong("reply_mid");
+                if (replyUid != 0L) {
+                    String replyUname = replyInfo.getString("reply_uname");
+                    reply = new UserInfo(replyUid, replyUname);
+                }
+
+                String content = message.getString("text");
+
+                Instant timestamp = LocalDateTime.parse(message.getString("timeline"), formatter)
+                        .atZone(ZoneId.systemDefault())
+                        .toInstant();
+
+                Integer type = message.getInteger("dm_type");
+                if (type == 0) {
+                    // 普通弹幕
+                    List<BilibiliEmojiInfo> emojis = new ArrayList<>();
+                    String contentText = content;
+                    JSONObject emojiInfos = message.getJSONObject("emots");
+                    if (emojiInfos != null) {
+                        for (String emojiName: emojiInfos.keySet()) {
+                            contentText = contentText.replace(emojiName, "");
+
+                            JSONObject emojiInfo = emojiInfos.getJSONObject(emojiName);
+                            String emojiId = emojiInfo.getString("emoticon_unique");
+                            String emojiUrl = emojiInfo.getString("url");
+                            Integer emojiWidth = emojiInfo.getInteger("width");
+                            Integer emojiHeight = emojiInfo.getInteger("height");
+                            Integer emojiCount = emojiInfo.getInteger("count");
+                            BilibiliEmojiInfo emoji = new BilibiliEmojiInfo(emojiId, emojiName, emojiUrl, emojiWidth, emojiHeight, emojiCount);
+                            emojis.add(emoji);
+                        }
+                    }
+
+                    Danmu danmu = new Danmu(DanmuType.NORMAL, sender, reply, content, contentText, emojis, timestamp);
+                    danmus.add(danmu);
+                } else if (type == 1) {
+                    // 表情弹幕
+                    List<BilibiliEmojiInfo> emojis = new ArrayList<>();
+                    JSONObject emojiInfo = message.getJSONObject("emoticon");
+
+                    String emojiId = emojiInfo.getString("emoticon_unique");
+                    String emojiName = emojiInfo.getString("text");
+                    String emojiUrl = emojiInfo.getString("url");
+                    Integer emojiWidth = emojiInfo.getInteger("width");
+                    Integer emojiHeight = emojiInfo.getInteger("height");
+                    BilibiliEmojiInfo emoji = new BilibiliEmojiInfo(emojiId, emojiName, emojiUrl, emojiWidth, emojiHeight);
+                    emojis.add(emoji);
+
+                    Danmu danmu = new Danmu(DanmuType.EMOJI, sender, reply, content, "", emojis, timestamp);
+                    danmus.add(danmu);
+                } else {
+                    log.warn("未处理的弹幕类型: {}, 内容: {}", type, message.toJSONString());
+                }
+            } catch (Exception e) {
+                log.error("读取弹幕信息异常, 原始接口返回结果: {}", message.toJSONString(), e);
             }
-
-            return danmus;
-        } catch (Exception e) {
-            log.error("直播间风控检测获取直播间 {} 最新弹幕失败, 偶然出现此异常为网络波动引起的正常现象: {}", roomId, e.getClass().getName());
-            return Collections.emptyList();
         }
+
+        return danmus;
     }
 
     /**

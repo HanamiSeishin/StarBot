@@ -1,9 +1,11 @@
 package com.starlwr.bot.bilibili.service;
 
+import com.starlwr.bot.bilibili.config.StarBotBilibiliProperties;
 import com.starlwr.bot.bilibili.factory.BilibiliLiveRoomConnectorFactory;
 import com.starlwr.bot.bilibili.model.Up;
 import com.starlwr.bot.bilibili.util.BilibiliApiUtil;
 import com.starlwr.bot.core.event.datasource.change.StarBotDataSourceUpdateEvent;
+import com.starlwr.bot.core.event.datasource.other.StarBotDataSourceLoadCompleteEvent;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +21,8 @@ import java.util.Map;
 @Slf4j
 @StarBotComponent
 public class BilibiliLiveRoomService {
+    private final StarBotBilibiliProperties properties;
+
     private final BilibiliApiUtil bilibili;
 
     private final BilibiliLiveRoomConnectorFactory connectorFactory;
@@ -32,7 +36,8 @@ public class BilibiliLiveRoomService {
     private final Map<Long, BilibiliLiveRoomConnector> connectors = new HashMap<>();
 
     @Autowired
-    public BilibiliLiveRoomService(BilibiliApiUtil bilibili, BilibiliLiveRoomConnectorFactory connectorFactory, BilibiliLiveRoomConnectTaskService taskService) {
+    public BilibiliLiveRoomService(StarBotBilibiliProperties properties, BilibiliApiUtil bilibili, BilibiliLiveRoomConnectorFactory connectorFactory, BilibiliLiveRoomConnectTaskService taskService) {
+        this.properties = properties;
         this.bilibili = bilibili;
         this.connectorFactory = connectorFactory;
         this.taskService = taskService;
@@ -49,6 +54,17 @@ public class BilibiliLiveRoomService {
         if (up != null) {
             up.setUname(event.getUser().getUname());
             up.setFace(event.getUser().getFace());
+        }
+    }
+
+    /**
+     * 直播间风控检测检查
+     */
+    @Order(-10000)
+    @EventListener(StarBotDataSourceLoadCompleteEvent.class)
+    public void onStarBotDataSourceLoadCompleteEvent() {
+        if (ups.size() > 20 && properties.getLive().isAutoDetectLiveRoomRisk()) {
+            log.warn("需要连接的直播间过多, 将不可避免的有部分直播间被数据风控, 建议关闭直播间数据风控检测功能, 避免持续尝试重新连接直播间导致更严重的风控");
         }
     }
 

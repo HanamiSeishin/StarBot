@@ -18,12 +18,10 @@ import com.starlwr.bot.core.util.FixedSizeSetQueue;
 import jakarta.websocket.ClientEndpoint;
 import jakarta.websocket.ContainerProvider;
 import jakarta.websocket.WebSocketContainer;
-import lombok.Getter;
-import lombok.NonNull;
+import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.brotli.dec.BrotliInputStream;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.util.Pair;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.socket.*;
@@ -83,7 +81,18 @@ public class BilibiliLiveRoomConnector {
 
     private ScheduledFuture<?> detectRiskTask;
 
-    private final FixedSizeSetQueue<Pair<Long, String>> latestDanmus = new FixedSizeSetQueue<>(30);
+    private Instant lastDetectRiskTime = Instant.now();
+
+    private final FixedSizeSetQueue<DanmuDTO> latestDanmus = new FixedSizeSetQueue<>(30);
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    private static class DanmuDTO {
+        private long uid;
+        private String content;
+        private long timestamp;
+    }
 
     public BilibiliLiveRoomConnector(ThreadPoolTaskExecutor executor, ApplicationEventPublisher eventPublisher, StarBotBilibiliProperties properties, LiveDataService liveDataService, BilibiliAccountService accountService, BilibiliLiveRoomConnectTaskService taskService, BilibiliEventParser eventParser, BilibiliApiUtil bilibili, TaskScheduler taskScheduler, Up up) {
         this.executor = executor;
@@ -160,6 +169,8 @@ public class BilibiliLiveRoomConnector {
                     lastHeartBeatResponseTime = Instant.now();
                     startHeartBeat();
 
+                    lastDetectRiskTime = Instant.now();
+                    latestDanmus.clear();
                     startDetectRisk();
                 } else {
                     throw new TimeoutException();
@@ -266,6 +277,7 @@ public class BilibiliLiveRoomConnector {
     private void stopHeartBeat() {
         if (heartBeatTask != null) {
             heartBeatTask.cancel(false);
+            heartBeatTask = null;
         }
     }
 
@@ -281,9 +293,6 @@ public class BilibiliLiveRoomConnector {
             return;
         }
 
-        latestDanmus.clear();
-        bilibili.getLiveRoomLatestDanmus(up.getRoomId()).forEach(latestDanmus::add);
-
         int interval = properties.getLive().getAutoDetectLiveRoomRiskInterval();
 
         detectRiskTask = taskScheduler.scheduleAtFixedRate(() -> executor.submit(() -> {
@@ -291,7 +300,25 @@ public class BilibiliLiveRoomConnector {
                 return;
             }
 
-            List<Pair<Long, String>> apiDanmus = bilibili.getLiveRoomLatestDanmus(up.getRoomId());
+            Optional<Boolean> optionalLiveStatus = liveDataService.getLiveStatus(LivePlatform.BILIBILI.getName(), up.getUid());
+            if (optionalLiveStatus.isEmpty() || !optionalLiveStatus.get()) {
+                return;
+            }
+
+            List<DanmuDTO> apiDanmus;
+            try {
+                apiDanmus = bilibili.getLiveRoomLatestDanmus(up.getRoomId())
+                        .stream()
+                        .filter(danmu -> danmu.getTimestamp().isAfter(lastDetectRiskTime))
+                        .map(danmu -> new DanmuDTO(danmu.getSender().getUid(), danmu.getContent(), danmu.getTimestamp().toEpochMilli()))
+                        .toList();
+            } catch (Exception e) {
+                log.error("直播间风控检测获取直播间 {} 最新弹幕失败, 偶然出现此异常可忽略", up.getRoomId(), e);
+                return;
+            }
+
+            lastDetectRiskTime = Instant.now();
+
             if (apiDanmus.isEmpty()) {
                 return;
             }
@@ -299,7 +326,7 @@ public class BilibiliLiveRoomConnector {
             long receivedCount = apiDanmus.stream().filter(latestDanmus::contains).count();
             double ratio = (double) receivedCount / apiDanmus.size() * 100;
             if (ratio <= properties.getLive().getAutoDetectLiveRoomRiskRatio()) {
-                log.debug("{} 的直播间 {} 数据抓取比例: {}%, 已达到风控阈值, 房间最新弹幕: {}, ", up.getUname(), up.getRoomId(), Math.round(ratio), apiDanmus);
+                log.debug("{} 的直播间 {} 数据抓取比例: {}%, 已达到风控阈值, 房间最新弹幕: {}", up.getUname(), up.getRoomId(), Math.round(ratio), apiDanmus);
 
                 status = ConnectStatus.RISK;
 
@@ -318,6 +345,7 @@ public class BilibiliLiveRoomConnector {
     private void stopDetectRisk() {
         if (detectRiskTask != null) {
             detectRiskTask.cancel(false);
+            detectRiskTask = null;
         }
     }
 
@@ -545,9 +573,9 @@ public class BilibiliLiveRoomConnector {
 
                                     if (connector.properties.getLive().isAutoDetectLiveRoomRisk()) {
                                         if (event instanceof BilibiliDanmuEvent danmuEvent) {
-                                            connector.latestDanmus.add(Pair.of(danmuEvent.getSender().getUid(), danmuEvent.getContent()));
+                                            connector.latestDanmus.add(new DanmuDTO(danmuEvent.getSender().getUid(), danmuEvent.getContent(), danmuEvent.getTimestamp()));
                                         } else if (event instanceof BilibiliEmojiEvent emojiEvent) {
-                                            connector.latestDanmus.add(Pair.of(emojiEvent.getSender().getUid(), emojiEvent.getEmoji().getName()));
+                                            connector.latestDanmus.add(new DanmuDTO(emojiEvent.getSender().getUid(), emojiEvent.getEmoji().getName(), emojiEvent.getTimestamp()));
                                         }
                                     }
 
