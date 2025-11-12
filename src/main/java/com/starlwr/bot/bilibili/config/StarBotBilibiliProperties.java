@@ -16,10 +16,10 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "starbot.bilibili")
 public class StarBotBilibiliProperties {
     @Getter
-    private final Debug debug = new Debug();
+    private final BilibiliThread bilibiliThread = new BilibiliThread();
 
     @Getter
-    private final BilibiliThread bilibiliThread = new BilibiliThread();
+    private final Debug debug = new Debug();
 
     @Getter
     private final Network network = new Network();
@@ -29,23 +29,6 @@ public class StarBotBilibiliProperties {
 
     @Getter
     private final Dynamic dynamic = new Dynamic();
-
-    /**
-     * 调试相关
-     */
-    @Getter
-    @Setter
-    public static class Debug {
-        /**
-         * 是否记录直播间原始消息日志
-         */
-        private boolean liveRoomRawMessageLog = false;
-
-        /**
-         * 是否记录原始动态信息日志
-         */
-        private boolean dynamicRawMessageLog = false;
-    }
 
     /**
      * 线程相关
@@ -72,6 +55,23 @@ public class StarBotBilibiliProperties {
          * 非核心线程存活时间，单位：秒
          */
         private int keepAliveSeconds = 300;
+    }
+
+    /**
+     * 调试相关
+     */
+    @Getter
+    @Setter
+    public static class Debug {
+        /**
+         * 是否记录直播间原始消息日志
+         */
+        private boolean liveRoomRawMessageLog = false;
+
+        /**
+         * 是否记录原始动态信息日志
+         */
+        private boolean dynamicRawMessageLog = false;
     }
 
     /**

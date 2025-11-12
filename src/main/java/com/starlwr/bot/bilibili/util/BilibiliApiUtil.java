@@ -29,7 +29,6 @@ import org.springframework.retry.backoff.FixedBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.util.CollectionUtils;
-import org.springframework.web.reactive.function.client.WebClientException;
 
 import java.awt.image.BufferedImage;
 import java.nio.charset.StandardCharsets;
@@ -80,7 +79,6 @@ public class BilibiliApiUtil {
     public void init() {
         Map<Class<? extends Throwable>, Boolean> retryableExceptions = new HashMap<>();
         retryableExceptions.put(NetworkException.class, true);
-        retryableExceptions.put(WebClientException.class, true);
 
         SimpleRetryPolicy retryPolicy = new SimpleRetryPolicy(properties.getNetwork().getApiRetryMaxTimes(), retryableExceptions);
         retryTemplate.setRetryPolicy(retryPolicy);
