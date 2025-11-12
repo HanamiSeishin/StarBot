@@ -22,6 +22,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 public class BilibiliLiveRoomConnectorFactory {
     private final ThreadPoolTaskExecutor executor;
 
+    private final TaskScheduler taskScheduler;
+
     private final ApplicationEventPublisher eventPublisher;
 
     private final StarBotBilibiliProperties properties;
@@ -36,11 +38,10 @@ public class BilibiliLiveRoomConnectorFactory {
 
     private final BilibiliApiUtil bilibili;
 
-    private final TaskScheduler taskScheduler;
-
     @Autowired
-    public BilibiliLiveRoomConnectorFactory(@Qualifier("bilibiliThreadPool") ThreadPoolTaskExecutor executor, ApplicationEventPublisher eventPublisher, StarBotBilibiliProperties properties, LiveDataService liveDataService, BilibiliAccountService accountService, BilibiliLiveRoomConnectTaskService taskService, BilibiliEventParser eventParser, BilibiliApiUtil bilibili, TaskScheduler taskScheduler) {
+    public BilibiliLiveRoomConnectorFactory(@Qualifier("bilibiliThreadPool") ThreadPoolTaskExecutor executor, TaskScheduler taskScheduler, ApplicationEventPublisher eventPublisher, StarBotBilibiliProperties properties, LiveDataService liveDataService, BilibiliAccountService accountService, BilibiliLiveRoomConnectTaskService taskService, BilibiliEventParser eventParser, BilibiliApiUtil bilibili) {
         this.executor = executor;
+        this.taskScheduler = taskScheduler;
         this.eventPublisher = eventPublisher;
         this.properties = properties;
         this.liveDataService = liveDataService;
@@ -48,7 +49,6 @@ public class BilibiliLiveRoomConnectorFactory {
         this.taskService = taskService;
         this.eventParser = eventParser;
         this.bilibili = bilibili;
-        this.taskScheduler = taskScheduler;
     }
 
     /**
@@ -57,6 +57,6 @@ public class BilibiliLiveRoomConnectorFactory {
      * @return 直播间连接器
      */
     public BilibiliLiveRoomConnector create(Up up) {
-        return new BilibiliLiveRoomConnector(executor, eventPublisher, properties, liveDataService, accountService, taskService, eventParser, bilibili, taskScheduler, up);
+        return new BilibiliLiveRoomConnector(executor, taskScheduler, eventPublisher, properties, liveDataService, accountService, taskService, eventParser, bilibili, up);
     }
 }

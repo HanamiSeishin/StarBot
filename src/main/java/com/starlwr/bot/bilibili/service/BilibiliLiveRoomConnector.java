@@ -47,6 +47,8 @@ import java.util.concurrent.*;
 public class BilibiliLiveRoomConnector {
     private final ThreadPoolTaskExecutor executor;
 
+    private final TaskScheduler taskScheduler;
+
     private final ApplicationEventPublisher eventPublisher;
 
     private final StarBotBilibiliProperties properties;
@@ -60,8 +62,6 @@ public class BilibiliLiveRoomConnector {
     private final BilibiliEventParser eventParser;
 
     private final BilibiliApiUtil bilibili;
-
-    private final TaskScheduler taskScheduler;
 
     @Getter
     private final Up up;
@@ -94,8 +94,9 @@ public class BilibiliLiveRoomConnector {
         private long timestamp;
     }
 
-    public BilibiliLiveRoomConnector(ThreadPoolTaskExecutor executor, ApplicationEventPublisher eventPublisher, StarBotBilibiliProperties properties, LiveDataService liveDataService, BilibiliAccountService accountService, BilibiliLiveRoomConnectTaskService taskService, BilibiliEventParser eventParser, BilibiliApiUtil bilibili, TaskScheduler taskScheduler, Up up) {
+    public BilibiliLiveRoomConnector(ThreadPoolTaskExecutor executor, TaskScheduler taskScheduler, ApplicationEventPublisher eventPublisher, StarBotBilibiliProperties properties, LiveDataService liveDataService, BilibiliAccountService accountService, BilibiliLiveRoomConnectTaskService taskService, BilibiliEventParser eventParser, BilibiliApiUtil bilibili, Up up) {
         this.executor = executor;
+        this.taskScheduler = taskScheduler;
         this.eventPublisher = eventPublisher;
         this.properties = properties;
         this.liveDataService = liveDataService;
@@ -103,7 +104,6 @@ public class BilibiliLiveRoomConnector {
         this.taskService = taskService;
         this.eventParser = eventParser;
         this.bilibili = bilibili;
-        this.taskScheduler = taskScheduler;
 
         this.up = up;
 
@@ -310,7 +310,7 @@ public class BilibiliLiveRoomConnector {
                 apiDanmus = bilibili.getLiveRoomLatestDanmus(up.getRoomId())
                         .stream()
                         .filter(danmu -> danmu.getTimestamp().isAfter(lastDetectRiskTime))
-                        .map(danmu -> new DanmuDTO(danmu.getSender().getUid(), danmu.getContent(), danmu.getTimestamp().toEpochMilli()))
+                        .map(danmu -> new DanmuDTO(danmu.getSender().getUid(), danmu.getContent(), danmu.getTimestamp().getEpochSecond()))
                         .toList();
             } catch (Exception e) {
                 log.error("直播间风控检测获取直播间 {} 最新弹幕失败, 偶然出现此异常可忽略", up.getRoomId(), e);
@@ -573,9 +573,9 @@ public class BilibiliLiveRoomConnector {
 
                                     if (connector.properties.getLive().isAutoDetectLiveRoomRisk()) {
                                         if (event instanceof BilibiliDanmuEvent danmuEvent) {
-                                            connector.latestDanmus.add(new DanmuDTO(danmuEvent.getSender().getUid(), danmuEvent.getContent(), danmuEvent.getTimestamp()));
+                                            connector.latestDanmus.add(new DanmuDTO(danmuEvent.getSender().getUid(), danmuEvent.getContent(), danmuEvent.getTimestamp() / 1000));
                                         } else if (event instanceof BilibiliEmojiEvent emojiEvent) {
-                                            connector.latestDanmus.add(new DanmuDTO(emojiEvent.getSender().getUid(), emojiEvent.getEmoji().getName(), emojiEvent.getTimestamp()));
+                                            connector.latestDanmus.add(new DanmuDTO(emojiEvent.getSender().getUid(), emojiEvent.getEmoji().getName(), emojiEvent.getTimestamp() / 1000));
                                         }
                                     }
 
