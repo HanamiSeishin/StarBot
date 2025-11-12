@@ -5,6 +5,7 @@ import com.starlwr.bot.bilibili.event.live.BilibiliLiveOnEvent;
 import com.starlwr.bot.bilibili.model.Room;
 import com.starlwr.bot.bilibili.model.Up;
 import com.starlwr.bot.bilibili.util.BilibiliApiUtil;
+import com.starlwr.bot.core.enums.PushTargetType;
 import com.starlwr.bot.core.event.StarBotExternalBaseEvent;
 import com.starlwr.bot.core.handler.DefaultHandlerForEvent;
 import com.starlwr.bot.core.handler.StarBotEventHandler;
@@ -23,7 +24,9 @@ import java.util.List;
  * <h4>参数格式:</h4>
  * <pre>
  *     {
+ *         "at_all": Boolean (是否 @ 全体成员)
  *         "message": String (推送消息模版)
+ *         "reconnect_message": String (断线重连推送消息)
  *     }
  * </pre>
  * <h4>推送消息模版支持的参数：</h4>
@@ -36,7 +39,9 @@ import java.util.List;
  * <h4>默认参数:</h4>
  * <pre>
  *     {
- *         "message": "{uname} 正在直播 {title}\n{url}{next}{cover}"
+ *         "at_all": false,
+ *         "message": "{uname} 正在直播 {title}\n{url}{next}{cover}",
+ *         "reconnect_message": "检测到下播后短时间内重新开播,本次开播不再重复通知"
  *     }
  * </pre>
  */
@@ -91,7 +96,8 @@ public class BilibiliLiveOnPushHandler implements StarBotEventHandler {
         }
 
         String raw = params.getString("message");
-        String content = raw.replace("{uname}", uname)
+        String atAll = params.getBooleanValue("at_all") && PushTargetType.GROUP == target.getType() && !raw.contains("{at=all}") ? "{at=all}{next}" : "";
+        String content = atAll + raw.replace("{uname}", uname)
                 .replace("{title}", title)
                 .replace("{url}", "https://live.bilibili.com/" + event.getSource().getRoomId())
                 .replace("{cover}", cover);
@@ -107,6 +113,7 @@ public class BilibiliLiveOnPushHandler implements StarBotEventHandler {
     public JSONObject getDefaultParams() {
         JSONObject params = new JSONObject();
 
+        params.put("at_all", false);
         params.put("message", "{uname} 正在直播 {title}\n{url}{next}{cover}");
         params.put("reconnect_message", "检测到下播后短时间内重新开播,本次开播不再重复通知");
 

@@ -5,6 +5,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.starlwr.bot.bilibili.config.StarBotBilibiliProperties;
 import com.starlwr.bot.bilibili.event.dynamic.BilibiliDynamicUpdateEvent;
 import com.starlwr.bot.bilibili.service.BilibiliDynamicService;
+import com.starlwr.bot.core.enums.PushTargetType;
 import com.starlwr.bot.core.event.StarBotExternalBaseEvent;
 import com.starlwr.bot.core.handler.DefaultHandlerForEvent;
 import com.starlwr.bot.core.handler.StarBotEventHandler;
@@ -27,10 +28,11 @@ import java.util.Optional;
  * <h4>参数格式:</h4>
  * <pre>
  *     {
+ *         "at_all": Boolean (是否 @ 全体成员)
  *         "message": String (推送消息模版)
  *         “white_list”: List&lt;String&gt; (类型白名单) [与 black_list 二选一配置，二者均配置以白名单优先]
  *         "black_list": List&lt;String&gt; (类型黑名单) [与 white_list 二选一配置，二者均配置以白名单优先]
- *         "only_self_origin": Boolean (是否仅推送源动态作者为自己的转发动态)
+ *         "only_self_origin": Boolean (当动态类型为转发动态时，是否过滤掉源动态作者不为自己的动态)
  *     }
  * </pre>
  * <h4>推送消息模版支持的参数：</h4>
@@ -43,6 +45,7 @@ import java.util.Optional;
  * <h4>默认参数:</h4>
  * <pre>
  *     {
+ *         "at_all": false,
  *         "message": "{uname} {action}\n{url}{next}{picture}"
  *         "white_list": [],
  *         "black_list": [],
@@ -112,7 +115,8 @@ public class BilibiliDynamicPushHandler implements StarBotEventHandler {
             String base64 = optionalBase64.get();
 
             String raw = params.getString("message");
-            String content = raw.replace("{uname}", event.getSource().getUname())
+            String atAll = params.getBooleanValue("at_all") && PushTargetType.GROUP == pushMessage.getTarget().getType() && !raw.contains("{at=all}") ? "{at=all}{next}" : "";
+            String content = atAll + raw.replace("{uname}", event.getSource().getUname())
                     .replace("{action}", event.getAction())
                     .replace("{url}", event.getUrl())
                     .replace("{picture}", "{image_base64=" + base64 + "}");
@@ -130,6 +134,7 @@ public class BilibiliDynamicPushHandler implements StarBotEventHandler {
     public JSONObject getDefaultParams() {
         JSONObject params = new JSONObject();
 
+        params.put("at_all", false);
         params.put("message", "{uname} {action}\n{url}{next}{picture}");
         params.put("white_list", List.of());
         params.put("black_list", List.of());

@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.starlwr.bot.bilibili.event.live.BilibiliLiveOffEvent;
 import com.starlwr.bot.bilibili.model.Up;
 import com.starlwr.bot.bilibili.util.BilibiliApiUtil;
+import com.starlwr.bot.core.enums.PushTargetType;
 import com.starlwr.bot.core.event.StarBotExternalBaseEvent;
 import com.starlwr.bot.core.handler.DefaultHandlerForEvent;
 import com.starlwr.bot.core.handler.StarBotEventHandler;
@@ -24,6 +25,7 @@ import java.util.Optional;
  * <h4>参数格式:</h4>
  * <pre>
  *     {
+ *         "at_all": Boolean (是否 @ 全体成员)
  *         "message": String (推送消息模版)
  *     }
  * </pre>
@@ -38,6 +40,7 @@ import java.util.Optional;
  * <h4>默认参数:</h4>
  * <pre>
  *     {
+ *         "at_all": false,
  *         "message": "{uname} 直播结束了"
  *     }
  * </pre>
@@ -97,7 +100,8 @@ public class BilibiliLiveOffPushHandler implements StarBotEventHandler {
         }
 
         String raw = params.getString("message");
-        String content = raw.replace("{uname}", uname)
+        String atAll = params.getBooleanValue("at_all") && PushTargetType.GROUP == pushMessage.getTarget().getType() && !raw.contains("{at=all}") ? "{at=all}{next}" : "";
+        String content = atAll + raw.replace("{uname}", uname)
                 .replace("{hours}", String.valueOf(hours))
                 .replace("{minutes}", String.valueOf(minutes))
                 .replace("{seconds}", String.valueOf(seconds))
@@ -115,6 +119,7 @@ public class BilibiliLiveOffPushHandler implements StarBotEventHandler {
     public JSONObject getDefaultParams() {
         JSONObject params = new JSONObject();
 
+        params.put("at_all", false);
         params.put("message", "{uname} 直播结束了");
 
         return params;
