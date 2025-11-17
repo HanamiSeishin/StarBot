@@ -31,6 +31,7 @@ import org.springframework.retry.support.RetryTemplate;
 import org.springframework.util.CollectionUtils;
 
 import java.awt.image.BufferedImage;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -79,8 +80,9 @@ public class BilibiliApiUtil {
     public void init() {
         Map<Class<? extends Throwable>, Boolean> retryableExceptions = new HashMap<>();
         retryableExceptions.put(NetworkException.class, true);
+        retryableExceptions.put(SocketTimeoutException.class, true);
 
-        SimpleRetryPolicy retryPolicy = new SimpleRetryPolicy(properties.getNetwork().getApiRetryMaxTimes(), retryableExceptions);
+        SimpleRetryPolicy retryPolicy = new SimpleRetryPolicy(properties.getNetwork().getApiRetryMaxTimes(), retryableExceptions, true);
         retryTemplate.setRetryPolicy(retryPolicy);
 
         FixedBackOffPolicy backOffPolicy = new FixedBackOffPolicy();
