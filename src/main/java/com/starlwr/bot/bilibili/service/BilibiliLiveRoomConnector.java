@@ -289,6 +289,11 @@ public class BilibiliLiveRoomConnector {
             return;
         }
 
+        if (properties.getLive().getAutoDetectLiveRoomRiskRatio() < 1 || properties.getLive().getAutoDetectLiveRoomRiskRatio() > 100) {
+            log.warn("直播间数据风控检测阈值配置不正确({}%), 请配置为 1 ~ 100 的数值后重试", properties.getLive().getAutoDetectLiveRoomRiskRatio());
+            return;
+        }
+
         if (detectRiskTask != null) {
             return;
         }
@@ -317,15 +322,15 @@ public class BilibiliLiveRoomConnector {
                 return;
             }
 
-            lastDetectRiskTime = Instant.now();
-
-            if (apiDanmus.isEmpty()) {
+            if (apiDanmus.size() < 4) {
                 return;
             }
 
+            lastDetectRiskTime = Instant.now();
+
             long receivedCount = apiDanmus.stream().filter(latestDanmus::contains).count();
             double ratio = (double) receivedCount / apiDanmus.size() * 100;
-            if (ratio <= properties.getLive().getAutoDetectLiveRoomRiskRatio()) {
+            if (ratio < properties.getLive().getAutoDetectLiveRoomRiskRatio()) {
                 log.debug("{} 的直播间 {} 数据抓取比例: {}%, 已达到风控阈值, 房间最新弹幕: {}", up.getUname(), up.getRoomId(), Math.round(ratio), apiDanmus);
 
                 status = ConnectStatus.RISK;

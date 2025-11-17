@@ -63,7 +63,7 @@ public class BilibiliLiveRoomService {
     @Order(-10000)
     @EventListener(StarBotDataSourceLoadCompleteEvent.class)
     public void onStarBotDataSourceLoadCompleteEvent() {
-        if (ups.size() > 20 && properties.getLive().isAutoDetectLiveRoomRisk()) {
+        if (ups.size() > 50 && properties.getLive().isAutoDetectLiveRoomRisk()) {
             log.warn("需要连接的直播间过多, 将不可避免的有部分直播间被数据风控, 建议关闭直播间数据风控检测功能, 避免持续尝试重新连接直播间导致更严重的风控");
         }
     }

@@ -143,7 +143,7 @@ public class StarBotBilibiliProperties {
         private int autoDetectLiveRoomRiskInterval = 60;
 
         /**
-         * 直播间数据风控检测阈值，范围：0 ~ 100，数值越高检测越严格
+         * 直播间数据风控检测阈值，范围：1 ~ 100，数值越高检测越严格
          */
         private int autoDetectLiveRoomRiskRatio = 50;
 
