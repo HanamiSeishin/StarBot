@@ -14,6 +14,7 @@ import com.starlwr.bot.core.model.PushMessage;
 import com.starlwr.bot.core.model.PushTarget;
 import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.sender.StarBotPushMessageSender;
+import com.starlwr.bot.core.util.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -90,7 +91,9 @@ public class BilibiliLiveOnPushHandler implements StarBotEventHandler {
         try {
             Room room = bilibili.getLiveInfoByRoomId(event.getSource().getRoomId());
             title = room.getTitle();
-            cover = "{image_url=" + room.getCover() + "}";
+            if (StringUtil.isNotBlank(room.getCover())) {
+                cover = "{image_url=" + room.getCover() + "}";
+            }
         } catch (Exception e) {
             log.error("获取 Bilibili 直播间封面信息失败, UID: {}, 昵称: {}, 房间号: {}", event.getSource().getUid(), event.getSource().getUname(), event.getSource().getRoomIdString(), e);
         }
