@@ -473,6 +473,10 @@ public class BilibiliApiUtil {
                 JSONObject userInfo = message.getJSONObject("user");
                 JSONObject baseInfo = userInfo.getJSONObject("base");
 
+                if (baseInfo == null) {
+                    continue;
+                }
+
                 Long uid = userInfo.getLong("uid");
                 String uname = baseInfo.getString("name");
                 String face = baseInfo.getString("face");
