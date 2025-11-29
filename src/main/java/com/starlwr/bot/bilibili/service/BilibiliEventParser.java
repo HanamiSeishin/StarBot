@@ -12,13 +12,13 @@ import com.starlwr.bot.core.event.live.StarBotBaseLiveEvent;
 import com.starlwr.bot.core.model.GiftInfo;
 import com.starlwr.bot.core.model.LiveStreamerInfo;
 import com.starlwr.bot.core.model.UserInfo;
+import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.util.MathUtil;
-import jakarta.annotation.Resource;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -31,18 +31,15 @@ import java.util.function.BiFunction;
  * Bilibili 事件解析器
  */
 @Slf4j
-@Service
+@StarBotComponent
 public class BilibiliEventParser {
-    private static final Logger rawMessageLogger = LoggerFactory.getLogger("RawMessageLogger");
+    private static final Logger liveMessageLogger = LoggerFactory.getLogger("LiveMessageLogger");
 
-    @Resource
-    private StarBotBilibiliProperties properties;
+    private final StarBotBilibiliProperties properties;
 
-    @Resource
-    private BilibiliApiUtil bilibili;
+    private final BilibiliApiUtil bilibili;
 
-    @Resource
-    private BilibiliGiftService giftService;
+    private final BilibiliGiftService giftService;
 
     private final Map<String, BiFunction<JSONObject, LiveStreamerInfo, StarBotBaseLiveEvent>> parsers = Map.of(
             "LIVE", BilibiliEventParser.this::parseLiveOnData,
@@ -56,6 +53,13 @@ public class BilibiliEventParser {
             "LIKE_INFO_V3_UPDATE", BilibiliEventParser.this::parseLikeUpdateData
     );
 
+    @Autowired
+    public BilibiliEventParser(StarBotBilibiliProperties properties, BilibiliApiUtil bilibili, BilibiliGiftService giftService) {
+        this.properties = properties;
+        this.bilibili = bilibili;
+        this.giftService = giftService;
+    }
+
     /**
      * 将直播间收到的原始消息转换为事件
      * @param data 原始消息
@@ -64,7 +68,7 @@ public class BilibiliEventParser {
     public Optional<StarBotBaseLiveEvent> parse(JSONObject data, LiveStreamerInfo source) {
         String type = data.getString("cmd");
         if (properties.getDebug().isLiveRoomRawMessageLog()) {
-            rawMessageLogger.debug("{}: {} -> {}", type, source.getRoomId(), data.toJSONString());
+            liveMessageLogger.debug("{}: {} -> {}", type, source.getRoomId(), data.toJSONString());
         }
 
         if (parsers.containsKey(type)) {
@@ -193,8 +197,18 @@ public class BilibiliEventParser {
         JSONObject senderInfo = metaInfo.getJSONObject("user");
         JSONObject senderBaseInfo = senderInfo.getJSONObject("base");
         Long senderUid = senderInfo.getLong("uid");
-        String senderUname = senderBaseInfo.getString("name");
-        String senderFace = senderBaseInfo.getString("face");
+
+        String senderUname = null;
+        String senderFace = null;
+        if (senderBaseInfo != null) {
+            senderUname = senderBaseInfo.getString("name");
+            senderFace = senderBaseInfo.getString("face");
+        } else {
+            if (completeEvent) {
+                senderUname = completeUname(senderUid, source).orElse(null);
+                senderFace = completeFace(senderUid, source).orElse(null);
+            }
+        }
 
         FansMedal fansMedal = null;
         JSONArray fansMedalInfo = info.getJSONArray(3);
@@ -335,7 +349,7 @@ public class BilibiliEventParser {
             } else {
                 Long randomGiftId = randomGiftInfo.getLong("original_gift_id");
                 String randomGiftName = randomGiftInfo.getString("original_gift_name");
-                double randomGiftPrice = MathUtil.divide(metaData.getInteger("total_coin"), 1000.0);
+                double randomGiftPrice = MathUtil.divide(randomGiftInfo.getInteger("original_gift_price"), 1000.0);
                 String randomGiftUrl = null;
                 if (completeEvent) {
                     randomGiftUrl = giftService.getGiftInfo(randomGiftId).map(Gift::getUrl).orElse(null);

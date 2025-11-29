@@ -1,18 +1,55 @@
 package com.starlwr.bot.bilibili.factory;
 
+import com.starlwr.bot.bilibili.config.StarBotBilibiliProperties;
 import com.starlwr.bot.bilibili.model.Up;
+import com.starlwr.bot.bilibili.service.BilibiliAccountService;
+import com.starlwr.bot.bilibili.service.BilibiliEventParser;
+import com.starlwr.bot.bilibili.service.BilibiliLiveRoomConnectTaskService;
 import com.starlwr.bot.bilibili.service.BilibiliLiveRoomConnector;
-import jakarta.annotation.Resource;
-import org.springframework.context.ApplicationContext;
-import org.springframework.stereotype.Component;
+import com.starlwr.bot.bilibili.util.BilibiliApiUtil;
+import com.starlwr.bot.core.plugin.StarBotComponent;
+import com.starlwr.bot.core.service.LiveDataService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /**
  * Bilibili 直播间连接器工厂
  */
-@Component
+@StarBotComponent
 public class BilibiliLiveRoomConnectorFactory {
-    @Resource
-    private ApplicationContext applicationContext;
+    private final ThreadPoolTaskExecutor executor;
+
+    private final TaskScheduler taskScheduler;
+
+    private final ApplicationEventPublisher eventPublisher;
+
+    private final StarBotBilibiliProperties properties;
+
+    private final LiveDataService liveDataService;
+
+    private final BilibiliAccountService accountService;
+
+    private final BilibiliLiveRoomConnectTaskService taskService;
+
+    private final BilibiliEventParser eventParser;
+
+    private final BilibiliApiUtil bilibili;
+
+    @Autowired
+    public BilibiliLiveRoomConnectorFactory(@Qualifier("bilibiliThreadPool") ThreadPoolTaskExecutor executor, TaskScheduler taskScheduler, ApplicationEventPublisher eventPublisher, StarBotBilibiliProperties properties, LiveDataService liveDataService, BilibiliAccountService accountService, BilibiliLiveRoomConnectTaskService taskService, BilibiliEventParser eventParser, BilibiliApiUtil bilibili) {
+        this.executor = executor;
+        this.taskScheduler = taskScheduler;
+        this.eventPublisher = eventPublisher;
+        this.properties = properties;
+        this.liveDataService = liveDataService;
+        this.accountService = accountService;
+        this.taskService = taskService;
+        this.eventParser = eventParser;
+        this.bilibili = bilibili;
+    }
 
     /**
      * 创建直播间连接器
@@ -20,6 +57,6 @@ public class BilibiliLiveRoomConnectorFactory {
      * @return 直播间连接器
      */
     public BilibiliLiveRoomConnector create(Up up) {
-        return applicationContext.getBean(BilibiliLiveRoomConnector.class, up);
+        return new BilibiliLiveRoomConnector(executor, taskScheduler, eventPublisher, properties, liveDataService, accountService, taskService, eventParser, bilibili, up);
     }
 }

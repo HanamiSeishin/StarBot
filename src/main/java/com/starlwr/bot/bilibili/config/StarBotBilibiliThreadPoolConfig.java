@@ -1,9 +1,9 @@
 package com.starlwr.bot.bilibili.config;
 
-import jakarta.annotation.Resource;
+import com.starlwr.bot.core.plugin.StarBotComponent;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.RejectedExecutionHandler;
@@ -13,10 +13,14 @@ import java.util.concurrent.ThreadPoolExecutor;
  * StarBotBilibili 线程池配置类
  */
 @Slf4j
-@Configuration
+@StarBotComponent
 public class StarBotBilibiliThreadPoolConfig {
-    @Resource
-    private StarBotBilibiliProperties properties;
+    private final StarBotBilibiliProperties properties;
+
+    @Autowired
+    public StarBotBilibiliThreadPoolConfig(StarBotBilibiliProperties properties) {
+        this.properties = properties;
+    }
 
     @Bean
     public ThreadPoolTaskExecutor bilibiliThreadPool() {
@@ -34,7 +38,10 @@ public class StarBotBilibiliThreadPoolConfig {
     private static class BilibiliWithLogCallerRunsPolicy implements RejectedExecutionHandler {
         @Override
         public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
-            log.error("Bilibili 线程池资源已耗尽, 请考虑增加线程池大小!");
+            if (executor.isShutdown()) {
+                return;
+            }
+            log.warn("Bilibili 线程池资源已耗尽, 请考虑增加线程池大小!");
             r.run();
         }
     }

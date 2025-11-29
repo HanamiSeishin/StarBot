@@ -3,17 +3,20 @@ package com.starlwr.bot.bilibili.handler;
 import com.alibaba.fastjson2.JSONObject;
 import com.starlwr.bot.bilibili.event.live.BilibiliLiveOnEvent;
 import com.starlwr.bot.bilibili.model.Room;
+import com.starlwr.bot.bilibili.model.Up;
 import com.starlwr.bot.bilibili.util.BilibiliApiUtil;
+import com.starlwr.bot.core.enums.PushTargetType;
 import com.starlwr.bot.core.event.StarBotExternalBaseEvent;
 import com.starlwr.bot.core.handler.DefaultHandlerForEvent;
 import com.starlwr.bot.core.handler.StarBotEventHandler;
 import com.starlwr.bot.core.model.Message;
 import com.starlwr.bot.core.model.PushMessage;
 import com.starlwr.bot.core.model.PushTarget;
+import com.starlwr.bot.core.plugin.StarBotComponent;
 import com.starlwr.bot.core.sender.StarBotPushMessageSender;
-import jakarta.annotation.Resource;
+import com.starlwr.bot.core.util.StringUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 
@@ -22,7 +25,9 @@ import java.util.List;
  * <h4>参数格式:</h4>
  * <pre>
  *     {
+ *         "at_all": Boolean (是否 @ 全体成员)
  *         "message": String (推送消息模版)
+ *         "reconnect_message": String (断线重连推送消息)
  *     }
  * </pre>
  * <h4>推送消息模版支持的参数：</h4>
@@ -35,43 +40,71 @@ import java.util.List;
  * <h4>默认参数:</h4>
  * <pre>
  *     {
- *         "message": "{uname} 正在直播 {title}\n{url}{next}{cover}"
+ *         "at_all": false,
+ *         "message": "{uname} 正在直播 {title}\n{url}{next}{cover}",
+ *         "reconnect_message": "检测到下播后短时间内重新开播,本次开播不再重复通知"
  *     }
  * </pre>
  */
 @Slf4j
-@Component
+@StarBotComponent
 @DefaultHandlerForEvent(event = "com.starlwr.bot.bilibili.event.live.BilibiliLiveOnEvent")
 public class BilibiliLiveOnPushHandler implements StarBotEventHandler {
-    @Resource
-    private BilibiliApiUtil bilibili;
+    private final BilibiliApiUtil bilibili;
 
-    @Resource
-    private StarBotPushMessageSender sender;
+    private final StarBotPushMessageSender sender;
+
+    @Autowired
+    public BilibiliLiveOnPushHandler(BilibiliApiUtil bilibili, StarBotPushMessageSender sender) {
+        this.bilibili = bilibili;
+        this.sender = sender;
+    }
 
     @Override
     public void handle(StarBotExternalBaseEvent baseEvent, PushMessage pushMessage) {
         BilibiliLiveOnEvent event = (BilibiliLiveOnEvent) baseEvent;
+
+        JSONObject params = pushMessage.getParamsJsonObject();
+        PushTarget target = pushMessage.getTarget();
+
+        if (event.isReconnect()) {
+            String content = params.getString("reconnect_message");
+            List<Message> messages = Message.create(target.getPlatform(), target.getType(), target.getNum(), content);
+
+            for (Message message : messages) {
+                sender.send(message);
+            }
+
+            return;
+        }
+
+        String uname = event.getSource().getUname();
+        try {
+            Up up = bilibili.getUpInfoByUid(event.getSource().getUid());
+            uname = up.getUname();
+        } catch (Exception e) {
+            log.error("获取 Bilibili 用户昵称失败, UID: {}, 昵称: {}, 房间号: {}", event.getSource().getUid(), event.getSource().getUname(), event.getSource().getRoomIdString(), e);
+        }
 
         String title = "";
         String cover = "";
         try {
             Room room = bilibili.getLiveInfoByRoomId(event.getSource().getRoomId());
             title = room.getTitle();
-            cover = "{image_url=" + room.getCover() + "}";
+            if (StringUtil.isNotBlank(room.getCover())) {
+                cover = "{image_url=" + room.getCover() + "}";
+            }
         } catch (Exception e) {
-            log.error("获取 Bilibili 直播间信息失败, UID: {}, 昵称: {}, 房间号: {}", event.getSource().getUid(), event.getSource().getUname(), event.getSource().getRoomId(), e);
+            log.error("获取 Bilibili 直播间封面信息失败, UID: {}, 昵称: {}, 房间号: {}", event.getSource().getUid(), event.getSource().getUname(), event.getSource().getRoomIdString(), e);
         }
 
-        JSONObject params = pushMessage.getParamsJsonObject();
-
         String raw = params.getString("message");
-        String content = raw.replace("{uname}", event.getSource().getUname())
+        String atAll = params.getBooleanValue("at_all") && PushTargetType.GROUP == target.getType() && !raw.contains("{at=all}") ? "{at=all}{next}" : "";
+        String content = atAll + raw.replace("{uname}", uname)
                 .replace("{title}", title)
                 .replace("{url}", "https://live.bilibili.com/" + event.getSource().getRoomId())
                 .replace("{cover}", cover);
 
-        PushTarget target = pushMessage.getTarget();
         List<Message> messages = Message.create(target.getPlatform(), target.getType(), target.getNum(), content);
 
         for (Message message : messages) {
@@ -83,7 +116,9 @@ public class BilibiliLiveOnPushHandler implements StarBotEventHandler {
     public JSONObject getDefaultParams() {
         JSONObject params = new JSONObject();
 
+        params.put("at_all", false);
         params.put("message", "{uname} 正在直播 {title}\n{url}{next}{cover}");
+        params.put("reconnect_message", "检测到下播后短时间内重新开播,本次开播不再重复通知");
 
         return params;
     }

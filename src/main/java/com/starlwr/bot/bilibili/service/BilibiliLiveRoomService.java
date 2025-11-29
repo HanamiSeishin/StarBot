@@ -1,11 +1,16 @@
 package com.starlwr.bot.bilibili.service;
 
+import com.starlwr.bot.bilibili.config.StarBotBilibiliProperties;
 import com.starlwr.bot.bilibili.factory.BilibiliLiveRoomConnectorFactory;
 import com.starlwr.bot.bilibili.model.Up;
 import com.starlwr.bot.bilibili.util.BilibiliApiUtil;
-import jakarta.annotation.Resource;
+import com.starlwr.bot.core.event.datasource.change.StarBotDataSourceUpdateEvent;
+import com.starlwr.bot.core.event.datasource.other.StarBotDataSourceLoadCompleteEvent;
+import com.starlwr.bot.core.plugin.StarBotComponent;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -14,22 +19,63 @@ import java.util.Map;
  * Bilibili 直播间服务
  */
 @Slf4j
-@Service
+@StarBotComponent
 public class BilibiliLiveRoomService {
-    @Resource
-    private BilibiliApiUtil bilibili;
+    private final StarBotBilibiliProperties properties;
 
-    @Resource
-    private BilibiliLiveRoomConnectorFactory connectorFactory;
+    private final BilibiliApiUtil bilibili;
 
-    @Resource
-    private BilibiliLiveRoomConnectTaskService taskService;
+    private final BilibiliLiveRoomConnectorFactory connectorFactory;
+
+    private final BilibiliLiveRoomConnectTaskService taskService;
 
     private final Map<Long, Up> ups = new HashMap<>();
 
     private final Map<Long, Long> roomIdMap = new HashMap<>();
 
     private final Map<Long, BilibiliLiveRoomConnector> connectors = new HashMap<>();
+
+    @Autowired
+    public BilibiliLiveRoomService(StarBotBilibiliProperties properties, BilibiliApiUtil bilibili, BilibiliLiveRoomConnectorFactory connectorFactory, BilibiliLiveRoomConnectTaskService taskService) {
+        this.properties = properties;
+        this.bilibili = bilibili;
+        this.connectorFactory = connectorFactory;
+        this.taskService = taskService;
+    }
+
+    /**
+     * 更新主播昵称头像
+     * @param event 事件
+     */
+    @Order(0)
+    @EventListener
+    public void onStarBotDataSourceUpdateEvent(StarBotDataSourceUpdateEvent event) {
+        Up up = ups.get(event.getUser().getUid());
+        if (up != null) {
+            up.setUname(event.getUser().getUname());
+            up.setFace(event.getUser().getFace());
+        }
+    }
+
+    /**
+     * 直播间风控检测检查
+     */
+    @Order(-10000)
+    @EventListener(StarBotDataSourceLoadCompleteEvent.class)
+    public void onStarBotDataSourceLoadCompleteEvent() {
+        if (ups.size() > 50 && properties.getLive().isAutoDetectLiveRoomRisk()) {
+            log.warn("需要连接的直播间过多, 将不可避免的有部分直播间被数据风控, 建议关闭直播间数据风控检测功能, 避免持续尝试重新连接直播间导致更严重的风控");
+        }
+    }
+
+    /**
+     * 是否存在指定 UID 的 UP 主
+     * @param uid UID
+     * @return 是否存在指定 UID 的 UP 主
+     */
+    public boolean hasUp(Long uid) {
+        return ups.containsKey(uid);
+    }
 
     /**
      * 根据 UID 添加直播间监听
@@ -75,7 +121,7 @@ public class BilibiliLiveRoomService {
         }
 
         if (ups.containsKey(up.getUid())) {
-            log.warn("{}(UID: {}, 房间号: {}) 已存在于监听列表中, 无需重复添加", up.getUname(), up.getUid(), up.getRoomId());
+            log.warn("{}(UID: {}, 房间号: {}) 已存在于监听列表中, 无需重复添加", up.getUname(), up.getUid(), up.getRoomIdString());
             return;
         }
 
@@ -129,7 +175,7 @@ public class BilibiliLiveRoomService {
      */
     public synchronized void removeUp(Up up) {
         if (!ups.containsKey(up.getUid())) {
-            log.warn("{}(UID: {}, 房间号: {}) 不存在于监听列表中, 无需移除", up.getUname(), up.getUid(), up.getRoomId());
+            log.warn("{}(UID: {}, 房间号: {}) 不存在于监听列表中, 无需移除", up.getUname(), up.getUid(), up.getRoomIdString());
             return;
         }
 

@@ -1,18 +1,34 @@
 package com.starlwr.bot.bilibili.factory;
 
+import com.starlwr.bot.bilibili.config.StarBotBilibiliProperties;
 import com.starlwr.bot.bilibili.model.Dynamic;
 import com.starlwr.bot.bilibili.painter.BilibiliDynamicPainter;
-import jakarta.annotation.Resource;
-import org.springframework.context.ApplicationContext;
-import org.springframework.stereotype.Component;
+import com.starlwr.bot.bilibili.util.BilibiliApiUtil;
+import com.starlwr.bot.core.factory.StarBotCommonPainterFactory;
+import com.starlwr.bot.core.plugin.StarBotComponent;
+import com.starlwr.bot.core.util.FontUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Bilibili 动态绘图器工厂
  */
-@Component
+@StarBotComponent
 public class BilibiliDynamicPainterFactory {
-    @Resource
-    private ApplicationContext applicationContext;
+    private final StarBotBilibiliProperties properties;
+
+    private final FontUtil fontUtil;
+
+    private final BilibiliApiUtil bilibili;
+
+    private final StarBotCommonPainterFactory factory;
+
+    @Autowired
+    public BilibiliDynamicPainterFactory(StarBotBilibiliProperties properties, FontUtil fontUtil, BilibiliApiUtil bilibili, StarBotCommonPainterFactory factory) {
+        this.properties = properties;
+        this.fontUtil = fontUtil;
+        this.bilibili = bilibili;
+        this.factory = factory;
+    }
 
     /**
      * 创建动态绘图器
@@ -20,6 +36,6 @@ public class BilibiliDynamicPainterFactory {
      * @return 动态绘图器
      */
     public BilibiliDynamicPainter create(Dynamic dynamic) {
-        return applicationContext.getBean(BilibiliDynamicPainter.class, dynamic);
+        return new BilibiliDynamicPainter(properties, fontUtil, bilibili, factory, dynamic);
     }
 }

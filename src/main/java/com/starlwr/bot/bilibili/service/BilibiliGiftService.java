@@ -3,10 +3,10 @@ package com.starlwr.bot.bilibili.service;
 import com.starlwr.bot.bilibili.config.StarBotBilibiliProperties;
 import com.starlwr.bot.bilibili.model.Gift;
 import com.starlwr.bot.bilibili.util.BilibiliApiUtil;
-import jakarta.annotation.Resource;
+import com.starlwr.bot.core.plugin.StarBotComponent;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Instant;
 import java.util.Map;
@@ -17,19 +17,23 @@ import java.util.stream.Collectors;
  * Bilibili 礼物服务
  */
 @Slf4j
-@Service
+@StarBotComponent
 public class BilibiliGiftService {
-    @Resource
-    private StarBotBilibiliProperties properties;
+    private final StarBotBilibiliProperties properties;
 
-    @Resource
-    private BilibiliApiUtil bilibili;
+    private final BilibiliApiUtil bilibili;
 
     private Map<String, String> guards;
 
     private Map<Long, Gift> gifts;
 
     private Instant lastUpdate = Instant.now();
+
+    @Autowired
+    public BilibiliGiftService(StarBotBilibiliProperties properties, BilibiliApiUtil bilibili) {
+        this.properties = properties;
+        this.bilibili = bilibili;
+    }
 
     /**
      * 更新大航海信息

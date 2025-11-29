@@ -1,6 +1,6 @@
 package com.starlwr.bot.bilibili.config;
 
-import ch.qos.logback.classic.Level;
+import com.starlwr.bot.core.plugin.StarBotComponent;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -12,19 +12,14 @@ import org.springframework.context.annotation.Configuration;
 @Getter
 @Setter
 @Configuration
+@StarBotComponent
 @ConfigurationProperties(prefix = "starbot.bilibili")
 public class StarBotBilibiliProperties {
-    @Getter
-    private final Log log = new Log();
-
-    @Getter
-    private final Debug debug = new Debug();
-
     @Getter
     private final BilibiliThread bilibiliThread = new BilibiliThread();
 
     @Getter
-    private final Cookie cookie = new Cookie();
+    private final Debug debug = new Debug();
 
     @Getter
     private final Network network = new Network();
@@ -34,40 +29,6 @@ public class StarBotBilibiliProperties {
 
     @Getter
     private final Dynamic dynamic = new Dynamic();
-
-    /**
-     * 日志相关
-     */
-    @Getter
-    @Setter
-    public static class Log {
-        /**
-         * 控制台日志级别
-         */
-        private Level console;
-
-        /**
-         * 文件日志级别
-         */
-        private Level file;
-    }
-
-    /**
-     * 调试相关
-     */
-    @Getter
-    @Setter
-    public static class Debug {
-        /**
-         * 是否记录直播间原始消息日志
-         */
-        private boolean liveRoomRawMessageLog = false;
-
-        /**
-         * 是否记录原始动态信息日志
-         */
-        private boolean dynamicRawMessageLog = false;
-    }
 
     /**
      * 线程相关
@@ -97,25 +58,20 @@ public class StarBotBilibiliProperties {
     }
 
     /**
-     * 登录相关
+     * 调试相关
      */
     @Getter
     @Setter
-    public static class Cookie {
+    public static class Debug {
         /**
-         * Cookie 中的 SESSDATA
+         * 是否记录直播间原始消息日志
          */
-        private String sessData;
+        private boolean liveRoomRawMessageLog = false;
 
         /**
-         * Cookie 中的 buvid3
+         * 是否记录原始动态信息日志
          */
-        private String buvid3;
-
-        /**
-         * Cookie 中的 bili_jct
-         */
-        private String biliJct;
+        private boolean dynamicRawMessageLog = false;
     }
 
     /**
@@ -147,6 +103,16 @@ public class StarBotBilibiliProperties {
     @Setter
     public static class Live {
         /**
+         * 是否启用直播间连接
+         */
+        private boolean enableConnectLiveRoom = true;
+
+        /**
+         * 是否仅连接启用了直播推送的直播间
+         */
+        private boolean onlyConnectNecessaryRooms = false;
+
+        /**
          * 连接两个直播间之间的时间间隔，单位：毫秒
          */
         private int liveRoomConnectInterval = 1000;
@@ -165,6 +131,31 @@ public class StarBotBilibiliProperties {
          * 是否自动补全事件中缺失的信息，开启后可能会因网络请求耗时导致事件延迟发布
          */
         private boolean completeEvent = false;
+
+        /**
+         * 是否自动检测直播间数据风控，检测到后会自动重新连接直播间
+         */
+        private boolean autoDetectLiveRoomRisk = true;
+
+        /**
+         * 自动检测直播间数据风控的时间间隔，单位：秒
+         */
+        private int autoDetectLiveRoomRiskInterval = 60;
+
+        /**
+         * 直播间数据风控检测阈值，范围：1 ~ 100，数值越高检测越严格
+         */
+        private int autoDetectLiveRoomRiskRatio = 50;
+
+        /**
+         * 是否启用备用直播推送
+         */
+        private boolean backupLivePush = true;
+
+        /**
+         * 备用直播推送检测时间间隔，单位：秒
+         */
+        private int backupLivePushInterval = 10;
     }
 
     /**
@@ -174,13 +165,33 @@ public class StarBotBilibiliProperties {
     @Setter
     public static class Dynamic {
         /**
+         * 是否自动关注开启了动态推送的 UP 主
+         */
+        private boolean autoFollow = true;
+
+        /**
+         * 自动关注的时间间隔，单位：秒
+         */
+        private int autoFollowInterval = 30;
+
+        /**
          * 动态接口请求频率，单位：秒
          */
-        public int apiRequestInterval = 10;
+        private int apiRequestInterval = 10;
+
+        /**
+         * 是否绘制 StarBot logo
+         */
+        private boolean drawLogo = true;
 
         /**
          * 是否自动保存绘制的动态图片
          */
-        public boolean autoSaveImage = false;
+        private boolean autoSaveImage = false;
+
+        /**
+         * 推送动态的时间范围，仅推送该时间内的动态，超时不再推送，设置为 0 为不限制，单位：分钟
+         */
+        private int pushMinutes = 1440;
     }
 }
