@@ -207,21 +207,40 @@ class DynamicPicGenerator:
                 download_picture_tasks.append(download_img(module))
         await asyncio.gather(*download_picture_tasks)
 
-        if dynamic_type == 1:
+        if dynamic_type == 0:
+            # 分享直播
+            title = limit_str_length(card['title'], 14)
+            desc = card['desc_first']
+            cover = card['cover']
+            await cls.__draw_live_area(pic, cover, title, desc, text_margin, forward)
+        elif dynamic_type == 1:
             # 转发动态
             await cls.__draw_content(pic, modules, text_margin, forward)
 
             if "origin" in card:
-                origin = json.loads(card["origin"])
                 origin_type = card["item"]["orig_type"]
-                origin_display = display["origin"]
+                if origin_type == 0:
+                    # 分享直播解析内容
+                    dynamic_origin_id = card["item"]["pre_dy_id"]
+                    dynamic_modules_url = f"https://api.bilibili.com/x/polymer/web-dynamic/v1/detail?timezone_offset=-480&id={dynamic_origin_id}"
+                    dynamic_origin_card = (await request("GET", dynamic_modules_url, credential=get_credential()))[
+                        "item"]
+                    origin_name_at_param = [{"type": "RICH_TEXT_NODE_TYPE_AT",
+                                             "text": f"@{dynamic_origin_card['modules']['module_author']['name']}"}]
+                    await cls.__draw_content(pic, origin_name_at_param, text_margin, True)
+                    await cls.__draw_by_type(pic, origin_type,
+                                             dynamic_origin_card["orig"]["modules"]["module_dynamic"]["major"]["live"],
+                                             dynamic_origin_id, {}, text_margin, img_margin, True)
+                else:
+                    origin = json.loads(card["origin"])
+                    origin_display = display["origin"]
 
-                origin_name = card["origin_user"]["info"]["uname"]
-                origin_name_at_param = [{"type": "RICH_TEXT_NODE_TYPE_AT", "text": f"@{origin_name}"}]
-                await cls.__draw_content(pic, origin_name_at_param, text_margin, True)
+                    origin_name = card["origin_user"]["info"]["uname"]
+                    origin_name_at_param = [{"type": "RICH_TEXT_NODE_TYPE_AT", "text": f"@{origin_name}"}]
+                    await cls.__draw_content(pic, origin_name_at_param, text_margin, True)
 
-                await cls.__draw_by_type(pic, origin_type, origin, origin_dynamic_id, origin_display,
-                                         text_margin, img_margin, True)
+                    await cls.__draw_by_type(pic, origin_type, origin, origin_dynamic_id, origin_display,
+                                             text_margin, img_margin, True)
         elif dynamic_type == 2:
             # 带图动态
             await cls.__draw_content(pic, modules, text_margin, forward)
