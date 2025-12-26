@@ -155,6 +155,9 @@ class Bot(BaseModel):
                 except RemoteException as ex:
                     logger.exception("消息推送模块异常", ex)
                     continue
+                except UnknownTarget:
+                    logger.error(f"好友[{msg.id}]消息发送失败: 对象位置未知, 不存在或不可及")
+                    return
         else:
             msgs, exception = await self.group_message_filter(msg)
 
