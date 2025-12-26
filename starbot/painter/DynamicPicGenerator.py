@@ -221,16 +221,12 @@ class DynamicPicGenerator:
                 origin_type = card["item"]["orig_type"]
                 if origin_type == 0:
                     # 分享直播解析内容
-                    dynamic_origin_id = card["item"]["pre_dy_id"]
+                    dynamic_origin_id = card["item"]["orig_dy_id"]
                     dynamic_modules_url = f"https://api.bilibili.com/x/polymer/web-dynamic/v1/detail?timezone_offset=-480&id={dynamic_origin_id}"
-                    dynamic_origin_card = (await request("GET", dynamic_modules_url, credential=get_credential()))[
-                        "item"]
-                    origin_name_at_param = [{"type": "RICH_TEXT_NODE_TYPE_AT",
-                                             "text": f"@{dynamic_origin_card['modules']['module_author']['name']}"}]
+                    dynamic_origin_card = (await request("GET", dynamic_modules_url, credential=get_credential()))["item"]['modules']
+                    origin_name_at_param = [{"type": "RICH_TEXT_NODE_TYPE_AT", "text": f"@{dynamic_origin_card['module_author']['name']}"}]
                     await cls.__draw_content(pic, origin_name_at_param, text_margin, True)
-                    await cls.__draw_by_type(pic, origin_type,
-                                             dynamic_origin_card["orig"]["modules"]["module_dynamic"]["major"]["live"],
-                                             dynamic_origin_id, {}, text_margin, img_margin, True)
+                    await cls.__draw_by_type(pic, origin_type, dynamic_origin_card["module_dynamic"]["major"]["live"], dynamic_origin_id, {}, text_margin, img_margin, True)
                 else:
                     origin = json.loads(card["origin"])
                     origin_display = display["origin"]
