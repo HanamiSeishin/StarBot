@@ -25,12 +25,15 @@ import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.util.Pair;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.retry.backoff.FixedBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.util.CollectionUtils;
 
 import java.awt.image.BufferedImage;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -42,8 +45,8 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 /**
@@ -64,10 +67,6 @@ public class BilibiliApiUtil {
     @Setter
     private Cookies cookies = new Cookies();
 
-    private final Pattern sessDataPattern = Pattern.compile("SESSDATA=(.*?)&");
-
-    private final Pattern biliJctPattern = Pattern.compile("bili_jct=(.*?)&");
-
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Autowired
@@ -80,6 +79,7 @@ public class BilibiliApiUtil {
     public void init() {
         Map<Class<? extends Throwable>, Boolean> retryableExceptions = new HashMap<>();
         retryableExceptions.put(NetworkException.class, true);
+        retryableExceptions.put(SocketException.class, true);
         retryableExceptions.put(SocketTimeoutException.class, true);
 
         SimpleRetryPolicy retryPolicy = new SimpleRetryPolicy(properties.getNetwork().getApiRetryMaxTimes(), retryableExceptions, true);
@@ -99,17 +99,23 @@ public class BilibiliApiUtil {
         Map<String, String> headers = new HashMap<>();
         headers.put("Referer", "https://www.bilibili.com");
         headers.put("User-Agent", properties.getNetwork().getUserAgent());
-        if (StringUtil.isNotBlank(cookies.getSessData()) && StringUtil.isNotBlank(cookies.getBuvid3()) && StringUtil.isNotBlank(cookies.getBiliJct())) {
-            headers.put(
-                    "Cookie", String.format(
-                            "SESSDATA=%s; buvid3=%s; bili_jct=%s; bili_ticket=%s; bili_ticket_expires=%s; ",
-                            cookies.getSessData(),
-                            cookies.getBuvid3(),
-                            cookies.getBiliJct(),
-                            sign.getTicket(),
-                            sign.getTicketExpires()
-                    )
-            );
+        if (StringUtil.isNotBlank(cookies.getSessData()) && StringUtil.isNotBlank(cookies.getBiliJct()) && StringUtil.isNotBlank(cookies.getBuvid3())) {
+            StringJoiner cookie = new StringJoiner("; ");
+            cookie.add("SESSDATA=" + cookies.getSessData());
+            cookie.add("buvid3=" + cookies.getBuvid3());
+            cookie.add("bili_jct=" + cookies.getBiliJct());
+            if (StringUtil.isNotBlank(cookies.getDedeUserId())) {
+                cookie.add("DedeUserID=" + cookies.getDedeUserId());
+            }
+            if (StringUtil.isNotBlank(cookies.getDedeUserIdCkMd5())) {
+                cookie.add("DedeUserID__ckMd5=" + cookies.getDedeUserIdCkMd5());
+            }
+            if (StringUtil.isNotBlank(cookies.getSid())) {
+                cookie.add("sid=" + cookies.getSid());
+            }
+            cookie.add("bili_ticket=" + sign.getTicket());
+            cookie.add("bili_ticket_expires=" + sign.getTicketExpires());
+            headers.put("Cookie", cookie.toString());
         }
         return headers;
     }
@@ -120,7 +126,7 @@ public class BilibiliApiUtil {
      * @return 请求结果
      */
     public JSONObject requestBilibiliApi(String url) {
-        return requestBilibiliApi(url, "GET", getBilibiliHeaders(), new HashMap<>());
+        return requestBilibiliApi(url, "GET", getBilibiliHeaders(), new HashMap<>(), JSONObject.class);
     }
 
     /**
@@ -130,7 +136,26 @@ public class BilibiliApiUtil {
      * @return 请求结果
      */
     public JSONObject requestBilibiliApi(String url, Map<String, Object> params) {
-        return requestBilibiliApi(url, "POST", getBilibiliHeaders(), params);
+        return requestBilibiliApi(url, "POST", getBilibiliHeaders(), params, JSONObject.class);
+    }
+
+    /**
+     * 使用默认 bilibili 请求头 GET 请求返回列表的 bilibili API
+     * @param url URL
+     * @return 请求结果
+     */
+    public JSONArray requestBilibiliApiForArray(String url) {
+        return requestBilibiliApi(url, "GET", getBilibiliHeaders(), new HashMap<>(), JSONArray.class);
+    }
+
+    /**
+     * 使用默认 bilibili 请求头 POST 请求返回列表的 bilibili API
+     * @param url URL
+     * @param params 请求参数
+     * @return 请求结果
+     */
+    public JSONArray requestBilibiliApiForArray(String url, Map<String, Object> params) {
+        return requestBilibiliApi(url, "POST", getBilibiliHeaders(), params, JSONArray.class);
     }
 
     /**
@@ -139,11 +164,11 @@ public class BilibiliApiUtil {
      * @param method 请求方法，GET 或 POST
      * @param headers 请求头
      * @param params 请求参数
+     * @param type 返回类型，JSONObject 或 JSONArray
      * @return 请求结果
      */
-    public JSONObject requestBilibiliApi(String url, String method, Map<String, String> headers, Map<String, Object> params) {
-        return retryTemplate.execute(retryContext -> {
-            JSONObject rtn;
+    public <T> T requestBilibiliApi(String url, String method, Map<String, String> headers, Map<String, Object> params, Class<T> type) {
+        return (T) retryTemplate.execute(retryContext -> {
             JSONObject result;
 
             if ("GET".equalsIgnoreCase(method)) {
@@ -168,14 +193,24 @@ public class BilibiliApiUtil {
             }
 
             if (result.containsKey("data")) {
-                rtn = result.getJSONObject("data");
+                if (type == JSONArray.class) {
+                    return result.getJSONArray("data");
+                } else if (type == JSONObject.class) {
+                    return result.getJSONObject("data");
+                } else {
+                    throw new IllegalArgumentException("返回类型参数只能为 JSONObject 或 JSONArray");
+                }
             } else if (result.containsKey("result")) {
-                rtn = result.getJSONObject("result");
+                if (type == JSONArray.class) {
+                    return result.getJSONArray("result");
+                } else if (type == JSONObject.class) {
+                    return result.getJSONObject("result");
+                } else {
+                    throw new IllegalArgumentException("返回类型参数只能为 JSONObject 或 JSONArray");
+                }
             } else {
                 throw new RequestFailedException("API 返回数据未含 data 或 result 字段: " + result);
             }
-
-            return rtn;
         });
     }
 
@@ -248,7 +283,16 @@ public class BilibiliApiUtil {
         List<CompletableFuture<Optional<BufferedImage>>> downloadPictureTasks = new ArrayList<>();
 
         for (String url : urls) {
-            CompletableFuture<Optional<BufferedImage>> task = asyncGetBilibiliImage(url, headers);
+            CompletableFuture<Optional<BufferedImage>> task = asyncGetBilibiliImage(url, headers)
+                    .orTimeout(30, TimeUnit.SECONDS)
+                    .exceptionally(throwable -> {
+                        if (throwable instanceof TimeoutException) {
+                            log.warn("从 {} 下载头像超时", url);
+                        } else {
+                            log.warn("从 {} 下载头像失败", url, throwable);
+                        }
+                        return Optional.empty();
+                    });
             downloadPictureTasks.add(task);
         }
 
@@ -264,7 +308,7 @@ public class BilibiliApiUtil {
      */
     public WebSign generateBilibiliWebSign() {
         String api = BilibiliTicketUtil.getBilibiliTicketUrl(cookies.getBiliJct());
-        JSONObject result = requestBilibiliApi(api, "POST", new HashMap<>(), new HashMap<>());
+        JSONObject result = requestBilibiliApi(api, "POST", new HashMap<>(), new HashMap<>(), JSONObject.class);
         String ticket = result.getString("ticket");
         Integer ticketExpires = result.getInteger("created_at") + result.getInteger("ttl");
 
@@ -301,27 +345,35 @@ public class BilibiliApiUtil {
     /**
      * 获取扫码登录状态
      * @param token 二维码 Token
-     * @return 是否登录成功
+     * @return 是否登录成功，null 表示尚未扫码或已扫码待确认
      */
     public Boolean getQrCodeLoginStatus(String token) {
         String api = "https://passport.bilibili.com/x/passport-login/web/qrcode/poll?qrcode_key=" + token;
-        JSONObject result = requestBilibiliApi(api);
 
-        Integer code = result.getInteger("code");
+        ResponseEntity<String> response = http.getForEntity(api, getBilibiliHeaders());
+
+        JSONObject body = response.getBody() == null ? null : JSON.parseObject(response.getBody());
+        JSONObject data = body == null ? null : body.getJSONObject("data");
+        Integer code = data == null ? null : data.getInteger("code");
+        if (code == null) {
+            log.warn("获取扫码登录接口状态码失败");
+            return null;
+        }
+
         if (code == 0) {
-            String url = result.getString("url");
-
-            Matcher sessDataMatcher = sessDataPattern.matcher(url);
-            Matcher biliJctMatcher = biliJctPattern.matcher(url);
-            if (sessDataMatcher.find() && biliJctMatcher.find()) {
-                String sessData = sessDataMatcher.group(1);
-                String biliJct = biliJctMatcher.group(1);
-                String buvid3 = getBuvid3();
-                cookies = new Cookies(sessData, biliJct, buvid3);
-            } else {
-                log.error("二维码登录失败, 原始接口返回结果: {}", result.toJSONString());
+            Cookies loginCookies = parseLoginCookies(response.getHeaders().get(HttpHeaders.SET_COOKIE));
+            if (StringUtil.isBlank(loginCookies.getSessData()) || StringUtil.isBlank(loginCookies.getBiliJct())) {
+                log.error("扫码登录成功, 但未能解析出登录凭据, 原始接口返回结果: {}", body.toJSONString());
                 return false;
             }
+
+            try {
+                loginCookies.setBuvid3(getBuvid3());
+            } catch (Exception e) {
+                log.warn("获取 buvid3 失败: {}", e.getMessage());
+            }
+
+            cookies = loginCookies;
 
             Path cookiePath = Path.of("cookies.json");
             try {
@@ -336,6 +388,46 @@ public class BilibiliApiUtil {
         } else {
             return null;
         }
+    }
+
+    /**
+     * 从扫码登录 Set-Cookie 响应头中解析登录凭据
+     * @param setCookies Set-Cookie 响应头
+     * @return 解析出的登录凭据
+     */
+    private Cookies parseLoginCookies(List<String> setCookies) {
+        Cookies loginCookies = new Cookies();
+        if (CollectionUtils.isEmpty(setCookies)) {
+            return loginCookies;
+        }
+
+        for (String header : setCookies) {
+            if (StringUtil.isBlank(header)) {
+                continue;
+            }
+
+            String pair = header.split(";", 2)[0].trim();
+            int equals = pair.indexOf('=');
+            if (equals <= 0) {
+                continue;
+            }
+
+            String name = pair.substring(0, equals).trim();
+            String value = pair.substring(equals + 1).trim();
+            if (value.isEmpty()) {
+                continue;
+            }
+
+            switch (name) {
+                case "SESSDATA" -> loginCookies.setSessData(value);
+                case "bili_jct" -> loginCookies.setBiliJct(value);
+                case "DedeUserID" -> loginCookies.setDedeUserId(value);
+                case "DedeUserID__ckMd5" -> loginCookies.setDedeUserIdCkMd5(value);
+                case "sid" -> loginCookies.setSid(value);
+            }
+        }
+
+        return loginCookies;
     }
 
     /**
@@ -608,7 +700,7 @@ public class BilibiliApiUtil {
     /**
      * 根据 UID 列表批量获取直播间信息
      * @param uids UID 列表
-     * @return 直播间信息
+     * @return 直播间信息列表
      */
     public Map<Long, Room> getLiveInfoByUids(Set<Long> uids) {
         Map<Long, Room> rooms = new HashMap<>();
@@ -641,13 +733,48 @@ public class BilibiliApiUtil {
                 Long liveStartTime = roomInfo.getLong("live_time") * 1000;
                 String title = roomInfo.getString("title");
                 String cover = roomInfo.getString("cover_from_user");
+                String parentAreaName = roomInfo.getString("area_v2_parent_name");
+                String areaName = roomInfo.getString("area_v2_name");
 
-                Room room = new Room(uid, uname, roomId, face, liveStatus, liveStartTime, title, cover);
+                Room room = new Room(uid, uname, roomId, face, liveStatus, liveStartTime, title, cover, parentAreaName, areaName);
                 rooms.put(uid, room);
             }
         }
 
         return rooms;
+    }
+
+    /**
+     * 根据 UID 列表批量获取用户信息
+     * @param uids UID 集合
+     * @return 用户信息列表
+     */
+    public Map<Long, UserInfo> getUserInfoByUids(Set<Long> uids) {
+        if (CollectionUtils.isEmpty(uids)) {
+            return new HashMap<>();
+        }
+
+        Map<Long, UserInfo> infos = new HashMap<>();
+
+        for (Long uid : uids) {
+            infos.put(uid, new UserInfo(uid, "昵称获取失败"));
+        }
+
+        List<List<Long>> parts = CollectionUtil.splitCollection(uids, 10);
+        for (List<Long> part: parts) {
+            String param = part.stream().map(String::valueOf).collect(Collectors.joining(","));
+            String api = "https://api.vc.bilibili.com/account/v1/user/cards?uids=" + param;
+            JSONArray results = requestBilibiliApiForArray(api);
+            for (Object result : results) {
+                JSONObject info = (JSONObject) result;
+                Long uid = info.getLong("mid");
+                String uname = info.getString("name");
+                String face = info.getString("face");
+                infos.put(uid, new UserInfo(uid, uname, face));
+            }
+        }
+
+        return infos;
     }
 
     /**
@@ -676,8 +803,10 @@ public class BilibiliApiUtil {
 
         String title = result.getString("title");
         String cover = result.getString("user_cover");
+        String parentAreaName = result.getString("parent_area_name");
+        String areaName = result.getString("area_name");
 
-        return new Room(uid, null, realRoomId, liveStatus, liveStartTime, title, cover);
+        return new Room(uid, null, realRoomId, liveStatus, liveStartTime, title, cover, parentAreaName, areaName);
     }
 
     /**
@@ -748,6 +877,43 @@ public class BilibiliApiUtil {
                 throw e;
             }
         }
+    }
 
+    /**
+     * 获取粉丝数
+     * @param uid UID
+     * @return 粉丝数
+     */
+    public int getFansCount(Long uid) {
+        String api = "https://api.live.bilibili.com/live_user/v1/Master/info?uid=" + uid;
+        JSONObject result = requestBilibiliApi(api);
+
+        return result.getIntValue("follower_num");
+    }
+
+    /**
+     * 获取粉丝团数(点亮粉丝勋章的粉丝数)
+     * @param uid UID
+     * @return 粉丝团数(点亮粉丝勋章的粉丝数)
+     */
+    public int getFansMedalCount(Long uid) {
+        String api = "https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuMedalAnchorInfo?ruid=" + uid;
+        JSONObject result = requestBilibiliApi(api);
+
+        return result.getIntValue("fans_club_count");
+    }
+
+    /**
+     * 获取大航海数
+     * @param uid UID
+     * @param roomId 房间号
+     * @return 大航海数
+     */
+    public int getGuardCount(Long uid, Long roomId) {
+        String api = "https://api.live.bilibili.com/xlive/app-room/v2/guardTab/topListNew?roomid=" + roomId + "&page=1&ruid=" + uid + "&page_size=20&typ=5&platform=web";
+        JSONObject result = requestBilibiliApi(api);
+
+        JSONObject info = result.getJSONObject("info");
+        return info.getIntValue("num");
     }
 }
