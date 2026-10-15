@@ -2,20 +2,20 @@ package com.starlwr.bot.bilibili.handler;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
-import com.starlwr.bot.bilibili.config.StarBotBilibiliProperties;
-import com.starlwr.bot.bilibili.event.dynamic.BilibiliDynamicUpdateEvent;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.starlwr.bot.bilibili.factory.BilibiliDynamicPainterFactory;
-import com.starlwr.bot.bilibili.painter.BilibiliDynamicPainter;
-import com.starlwr.bot.core.enums.PushTargetType;
+import com.starlwr.bot.bilibili.config.StarBotBilibiliProperties;
+import com.starlwr.bot.bilibili.dynamic.BilibiliDynamicPainter;
+import com.starlwr.bot.bilibili.dynamic.BilibiliDynamicPainterFactory;
+import com.starlwr.bot.bilibili.event.dynamic.BilibiliDynamicUpdateEvent;
 import com.starlwr.bot.core.event.StarBotExternalBaseEvent;
-import com.starlwr.bot.core.handler.StarBotEventHandler;
-import com.starlwr.bot.core.model.Message;
-import com.starlwr.bot.core.model.PushMessage;
-import com.starlwr.bot.core.model.PushTarget;
+import com.starlwr.bot.core.message.Message;
+import com.starlwr.bot.core.message.PushTargetType;
+import com.starlwr.bot.core.message.StarBotMessageSender;
 import com.starlwr.bot.core.plugin.StarBotComponent;
-import com.starlwr.bot.core.sender.StarBotMessageSender;
+import com.starlwr.bot.core.push.handler.StarBotEventHandler;
+import com.starlwr.bot.core.push.model.PushMessage;
+import com.starlwr.bot.core.push.model.PushTarget;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -119,7 +119,7 @@ public class BilibiliDynamicPushHandler implements StarBotEventHandler {
 
         boolean onlySelfOrigin = params.getBooleanValue("only_self_origin", false);
         if ("DYNAMIC_TYPE_FORWARD".equals(type) && onlySelfOrigin) {
-            Long originUid = event.getDynamic().getOrigin().getModules().getJSONObject("module_author").getLong("mid");
+            String originUid = event.getDynamic().getOrigin().getModules().getJSONObject("module_author").getString("mid");
             if (!event.getSource().getUid().equals(originUid)) {
                 log.info("[{}] {} 的转发动态源作者不为自己, 跳过推送", event.getPlatform(), event.getSource().getUname());
                 return;
