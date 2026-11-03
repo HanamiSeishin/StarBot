@@ -1,11 +1,7 @@
 .idea/
 target/
 logs/
-LiveDebug/
-DynamicDebug/
-EventDebug/
-NetworkDebug/
-data.json
-cookies.json
+debug/
+data/
 datasource.json
 src/main/resources/application-dev.yml
